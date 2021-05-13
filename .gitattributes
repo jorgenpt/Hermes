@@ -1,0 +1,5 @@
+# It's possible to use working-tree-encoding these days, but it requires
+# a new git and I couldn't quite get the native `git diff` to give good
+# results, so stick with binary & a custom diff tool.
+[attr]ucs2 binary diff=ucs2 -eol
+*.uplugin ucs2
