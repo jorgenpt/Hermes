@@ -1,0 +1,19 @@
+## Bichrome
+/bichrome.log
+
+## Rust
+/target
+
+## Entries from https://github.com/github/gitignore/blob/eefa65c924329ad918985713cdb195e6bc68744b/Global/VisualStudioCode.gitignore
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+# Release body for GH releases
+gh-release.md

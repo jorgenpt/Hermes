@@ -15,6 +15,7 @@ public class HermesServer : ModuleRules
 			new[]
 			{
 				"CoreUObject",
+				"HermesURLHandler",
 				"HTTP",
 				"UnrealEd",
 			}
