@@ -79,13 +79,18 @@ fn unregister_protocol(protocol: &str) {
 /// Remove a previous hostname registration
 fn unregister_hostname(protocol: &str, hostname: &str) {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(hosts) = hkcu.open_subkey(get_hosts_registry_key(protocol)) {
-        let _ = hosts.delete_subkey_all(hostname);
+    if let Ok(hosts) = hkcu.open_subkey_with_flags(
+        get_hosts_registry_key(protocol),
+        winreg::enums::KEY_SET_VALUE | winreg::enums::KEY_READ,
+    ) {
+        let _ = hosts.delete_value(hostname);
 
         // If this was the last registration, unregister the entire protocol
         if hosts.enum_values().next().is_none() {
             unregister_protocol(protocol);
         }
+    } else {
+        unregister_protocol(protocol);
     }
 }
 
