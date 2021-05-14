@@ -17,7 +17,6 @@ thiserror = "^1"
 url = "^2.2.0"
 
 [target.'cfg(windows)'.dependencies]
-windows_bindings = { path = "windows_bindings" }
 winreg = "0.8"
 
 [target.'cfg(windows)'.build-dependencies]

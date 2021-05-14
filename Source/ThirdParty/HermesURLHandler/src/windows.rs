@@ -8,7 +8,6 @@ use std::{
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
-use windows_bindings;
 use winreg::{enums::*, RegKey};
 
 // How many bytes do we let the log size grow to before we rotate it? We only keep one current and one old log.
