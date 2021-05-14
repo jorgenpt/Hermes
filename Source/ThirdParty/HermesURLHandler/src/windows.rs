@@ -60,7 +60,7 @@ fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()>
     progid_class_defaulticon.set_value("", &icon_path)?;
 
     debug!(
-        r"set HKEY_CURRENT_USER\\{}\DefaultIcon to '{}'",
+        r"set HKEY_CURRENT_USER\{}\DefaultIcon to '{}'",
         protocol_path, icon_path
     );
 
@@ -68,7 +68,7 @@ fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()>
     progid_class_shell_open_command.set_value("", &open_command)?;
 
     debug!(
-        r"set HKEY_CURRENT_USER\\{}\shell\open\command to '{}'",
+        r"set HKEY_CURRENT_USER\{}\shell\open\command to '{}'",
         protocol_path, open_command
     );
 
@@ -86,8 +86,16 @@ fn register_hostname(
     register_protocol(protocol, extra_args)?;
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let (hosts, _) = hkcu.create_subkey(get_hosts_registry_key(&protocol))?;
-    hosts.set_value(&hostname, commandline)
+    let hosts_path = get_hosts_registry_key(&protocol);
+    let (hosts, _) = hkcu.create_subkey(&hosts_path)?;
+    hosts.set_value(&hostname, commandline)?;
+
+    debug!(
+        r"set HKEY_CURRENT_USER\{}\{} to {:?}",
+        hosts_path, hostname, commandline
+    );
+
+    Ok(())
 }
 
 /// Remove all the registry keys that we've set up
@@ -136,9 +144,8 @@ fn unregister_hostname(protocol: &str, hostname: &str) {
     info!("unregistering handler for {}://{}", protocol, hostname);
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(hosts) =
-        hkcu.open_subkey_with_flags(get_hosts_registry_key(protocol), ENUMERATE_AND_DELETE_FLAGS)
-    {
+    let hosts_path = get_hosts_registry_key(protocol);
+    if let Ok(hosts) = hkcu.open_subkey_with_flags(&hosts_path, ENUMERATE_AND_DELETE_FLAGS) {
         let _ = hosts.delete_value(hostname);
 
         // If this was the last registration, unregister the entire protocol
@@ -150,6 +157,10 @@ fn unregister_hostname(protocol: &str, hostname: &str) {
             unregister_protocol(protocol);
         }
     } else {
+        trace!(
+            "couldn't open registry key {}, assuming there are no host registrations",
+            hosts_path
+        );
         unregister_protocol(protocol);
     }
 }
