@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, error, info, trace, warn};
 use mail_slot;
 use simplelog::*;
@@ -6,8 +6,10 @@ use std::{
     fs::{File, OpenOptions},
     io,
     path::{Path, PathBuf},
+    process::{Command, ExitStatus},
 };
 use structopt::StructOpt;
+use url;
 use winreg::{enums::*, RegKey};
 
 // How many bytes do we let the log size grow to before we rotate it? We only keep one current and one old log.
@@ -65,8 +67,7 @@ fn register_hostname(protocol: &str, hostname: &str, commandline: &Vec<String>) 
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let (hosts, _) = hkcu.create_subkey(get_hosts_registry_key(&protocol))?;
-    let commandline = format!("\"{}\"", commandline.join("\""));
-    hosts.set_value(&hostname, &commandline)
+    hosts.set_value(&hostname, commandline)
 }
 
 /// Remove all the registry keys that we've set up
@@ -92,6 +93,42 @@ fn unregister_hostname(protocol: &str, hostname: &str) {
     } else {
         unregister_protocol(protocol);
     }
+}
+
+/// Dispatch the given URL to the correct mailslot or launch the editor
+fn open_url(url: &str) -> Result<ExitStatus> {
+    let url = url::Url::parse(url)?;
+    let protocol = url.scheme();
+    let hostname = url
+        .host_str()
+        .ok_or(anyhow!("could not parse hostname from {}", url))?;
+    let path = url.path();
+
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let hosts = hkcu
+        .open_subkey(get_hosts_registry_key(protocol))
+        .with_context(|| format!("no hostnames registered when trying to handle url {}", url))?;
+    let host_handler: Vec<_> = hosts.get_value(hostname).with_context(|| {
+        format!(
+            "hostname {} not registered when trying to handle url {}",
+            hostname, url
+        )
+    })?;
+
+    // TODO: Handle %%1 as an escape?
+    let (exe_name, args) = {
+        let mut host_handler = host_handler.into_iter();
+        let exe_name = host_handler
+            .next()
+            .ok_or(anyhow!("empty command specified for hostname {}", hostname))?;
+        let args: Vec<_> = host_handler.map(|arg| arg.replace("%1", path)).collect();
+        (exe_name, args)
+    };
+
+    Command::new(&exe_name)
+        .args(&args)
+        .status()
+        .with_context(|| format!("Failed to execute {:?} {:?}", exe_name, args))
 }
 
 // This is the definition of our command line options
@@ -243,7 +280,11 @@ pub fn main() -> Result<()> {
             unregister_hostname(&protocol, &hostname);
         }
         ExecutionMode::Open { url } => {
-            // TODO
+            let exit_status =
+                open_url(&url).with_context(|| format!("Failed to open url {}", url))?;
+            if !exit_status.success() {
+                bail!("Exit status {} when opening {}", exit_status, url);
+            }
         }
     }
 
