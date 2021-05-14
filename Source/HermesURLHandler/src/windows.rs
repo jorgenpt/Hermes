@@ -1,12 +1,12 @@
 use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, trace, warn};
-use mail_slot;
+use mail_slot::{MailslotClient, MailslotName};
 use simplelog::*;
 use std::{
     fs::{File, OpenOptions},
     io,
     path::{Path, PathBuf},
-    process::{Command, ExitStatus},
+    process::Command,
 };
 use structopt::StructOpt;
 use url;
@@ -182,7 +182,7 @@ fn get_path_and_extras(url: &url::Url) -> String {
 }
 
 /// Dispatch the given URL to the correct mailslot or launch the editor
-fn open_url(url: &str) -> Result<ExitStatus> {
+fn open_url(url: &str) -> Result<()> {
     let url = url::Url::parse(url)?;
     let protocol = url.scheme();
     let hostname = url
@@ -208,23 +208,49 @@ fn open_url(url: &str) -> Result<ExitStatus> {
         )
     })?;
 
-    let (exe_name, args) = {
-        debug!("registered handler for {}: {:?}", hostname, host_handler);
-        let mut host_handler = host_handler.into_iter();
-        let exe_name = host_handler
-            .next()
-            .ok_or(anyhow!("empty command specified for hostname {}", hostname))?;
-
-        // TODO: Handle %%1 as an escape?
-        let args: Vec<_> = host_handler.map(|arg| arg.replace("%1", &path)).collect();
-        (exe_name, args)
+    let could_send = {
+        let slot = MailslotName::local(&format!(r"bitSpatter\Hermes\{}\{}", protocol, hostname));
+        if let Ok(mut client) = MailslotClient::new(&slot) {
+            if let Err(error) = client.send_message(path.as_bytes()) {
+                warn!("Could not send mail slot message to {}: {} -- assuming application is shutting down, starting a new one", slot.to_string(), error);
+                false
+            } else {
+                true
+            }
+        } else {
+            false
+        }
     };
 
-    info!("executing {:?} with arguments {:?}", exe_name, args);
-    Command::new(&exe_name)
-        .args(&args)
-        .status()
-        .with_context(|| format!("Failed to execute {:?} {:?}", exe_name, args))
+    if !could_send {
+        let (exe_name, args) = {
+            debug!("registered handler for {}: {:?}", hostname, host_handler);
+            let mut host_handler = host_handler.into_iter();
+            let exe_name = host_handler
+                .next()
+                .ok_or(anyhow!("empty command specified for hostname {}", hostname))?;
+
+            // TODO: Handle %%1 as an escape?
+            let args: Vec<_> = host_handler.map(|arg| arg.replace("%1", &path)).collect();
+            (exe_name, args)
+        };
+
+        info!("executing {:?} with arguments {:?}", exe_name, args);
+        let exit_status = Command::new(&exe_name)
+            .args(&args)
+            .status()
+            .with_context(|| format!("Failed to execute {:?} {:?}", exe_name, args))?;
+        if !exit_status.success() {
+            bail!(
+                "Failure exit status {} when running {:?} with arguments {:?}",
+                exit_status,
+                exe_name,
+                args
+            );
+        }
+    }
+
+    Ok(())
 }
 
 // This is the definition of our command line options
@@ -389,11 +415,7 @@ pub fn main() -> Result<()> {
             unregister_hostname(&protocol, &hostname);
         }
         ExecutionMode::Open { url } => {
-            let exit_status =
-                open_url(&url).with_context(|| format!("Failed to open url {}", url))?;
-            if !exit_status.success() {
-                bail!("Exit status {} when opening {}", exit_status, url);
-            }
+            open_url(&url).with_context(|| format!("Failed to open url {}", url))?;
         }
     }
 
