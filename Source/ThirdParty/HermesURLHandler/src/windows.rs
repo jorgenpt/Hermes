@@ -26,7 +26,7 @@ fn get_protocol_registry_key(protocol: &str) -> String {
 }
 
 fn get_configuration_registry_key(protocol: &str) -> String {
-    format!(r"Software\bitSpatter\Hermes\{}", protocol)
+    format!(r"Software\bitSpatter\Hermes\Protocols\{}", protocol)
 }
 
 fn get_hosts_registry_key(protocol: &str) -> String {
