@@ -92,7 +92,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hermes-urls"
+name = "hermes_urls"
 version = "0.1.0"
 dependencies = [
  "anyhow",

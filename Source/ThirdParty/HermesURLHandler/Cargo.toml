@@ -1,5 +1,5 @@
 [package]
-name = "hermes-urls"
+name = "hermes_urls"
 version = "0.1.0"
 authors = ["Jørgen P. Tjernø <jorgen@tjer.no>"]
 edition = "2018"
@@ -23,7 +23,7 @@ winreg = { git = "https://github.com/jorgenpt/winreg-rs", branch = "multi_sz" }
 winres = "^0.1"
 
 [package.metadata.winres]
-OriginalFilename = "hermes-urls.exe"
+OriginalFilename = "hermes_urls.exe"
 FileDescription = "Hermes URL Handler"
 ProductName = "Hermes URL Handler"
 LegalCopyright = "© Jørgen P. Tjernø <jorgen@tjer.no>"
