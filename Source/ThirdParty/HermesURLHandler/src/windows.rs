@@ -41,9 +41,9 @@ fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()>
     let exe_path = exe_path.to_str().unwrap_or_default().to_owned();
     let icon_path = format!("\"{}\",0", exe_path);
     let open_command = if let Some(extra_args) = extra_args {
-        format!("\"{}\" {} \"%1\"", exe_path, extra_args)
+        format!("\"{}\" {} open \"%1\"", exe_path, extra_args)
     } else {
-        format!("\"{}\" \"%1\"", exe_path)
+        format!("\"{}\" open \"%1\"", exe_path)
     };
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
