@@ -25,6 +25,10 @@ fn get_configuration_registry_key(protocol: &str) -> String {
     format!(r"Software\bitSpatter\Hermes\{}", protocol)
 }
 
+fn get_hosts_registry_key(protocol: &str) -> String {
+    get_configuration_registry_key(protocol) + r"\Hosts"
+}
+
 /// Register associations with Windows to handle our protocol
 fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()> {
     use std::env::current_exe;
@@ -57,24 +61,33 @@ fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()>
 }
 
 /// Register a new host & EXE pair
-fn register_host(protocol: &str, host: &str, commandline: &Vec<String>) -> io::Result<()> {
-    let _hkcu = RegKey::predef(HKEY_CURRENT_USER);
+fn register_host(protocol: &str, hostname: &str, commandline: &Vec<String>) -> io::Result<()> {
+    register_protocol(protocol, None)?;
 
-    Ok(())
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let (hosts, _) = hkcu.create_subkey(get_hosts_registry_key(&protocol))?;
+    let commandline = format!("\"{}\"", commandline.join("\""));
+    hosts.set_value(&hostname, &commandline)
 }
 
 /// Remove all the registry keys that we've set up
 fn unregister_protocol(protocol: &str) {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let _ = hkcu.delete_subkey_all(get_protocol_registry_key(protocol));
-
-    // TODO #jorgen: Remove all host registrations
+    let _ = hkcu.delete_subkey_all(get_configuration_registry_key(protocol));
 }
 
 /// Remove a previous host registration
-fn unregister_host(_protocol: &str, _hostname: &str) {
-    // Find the current executable's name, so we can unregister it
-    let _hkcu = RegKey::predef(HKEY_CURRENT_USER);
+fn unregister_host(protocol: &str, hostname: &str) {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(hosts) = hkcu.open_subkey(get_hosts_registry_key(protocol)) {
+        let _ = hosts.delete_subkey_all(hostname);
+
+        // If this was the last registration, unregister the entire protocol
+        if hosts.enum_values().next().is_none() {
+            unregister_protocol(protocol);
+        }
+    }
 }
 
 // This is the definition of our command line options
