@@ -59,8 +59,8 @@ fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()>
     Ok(())
 }
 
-/// Register a new host & EXE pair
-fn register_host(protocol: &str, hostname: &str, commandline: &Vec<String>) -> io::Result<()> {
+/// Register a new hostname & command pair
+fn register_hostname(protocol: &str, hostname: &str, commandline: &Vec<String>) -> io::Result<()> {
     register_protocol(protocol, None)?;
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
@@ -76,8 +76,8 @@ fn unregister_protocol(protocol: &str) {
     let _ = hkcu.delete_subkey_all(get_configuration_registry_key(protocol));
 }
 
-/// Remove a previous host registration
-fn unregister_host(protocol: &str, hostname: &str) {
+/// Remove a previous hostname registration
+fn unregister_hostname(protocol: &str, hostname: &str) {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     if let Ok(hosts) = hkcu.open_subkey(get_hosts_registry_key(protocol)) {
         let _ = hosts.delete_subkey_all(hostname);
@@ -126,7 +126,7 @@ enum ExecutionMode {
     },
 
     /// Register a specific hostname (and, if needed, this EXE as an URL protocol handler)
-    RegisterHost {
+    RegisterHostname {
         /// The protocol this hostname will be registered for (this will implicity invoke `register` for the protocol if needed)
         protocol: String,
         /// The hostname to register a handler for
@@ -142,7 +142,7 @@ enum ExecutionMode {
     },
 
     /// Unregister a specific host name
-    UnregisterHost {
+    UnregisterHostname {
         /// The protocol this hostname will be unregistered from
         protocol: String,
         /// The hostname whose handler we're unregistering
@@ -224,18 +224,18 @@ pub fn main() -> Result<()> {
             register_protocol(&protocol, extra_args)
                 .with_context(|| format!("Failed to register handler for {}://", protocol))?;
         }
-        ExecutionMode::RegisterHost {
+        ExecutionMode::RegisterHostname {
             protocol,
             hostname,
             commandline,
-        } => register_host(&protocol, &hostname, &commandline)
+        } => register_hostname(&protocol, &hostname, &commandline)
             .with_context(|| format!("Failed to register host for {}://{}", protocol, hostname))?,
         ExecutionMode::Unregister { protocol } => {
             info!("unregistering handler for {}://", protocol);
             unregister_protocol(&protocol);
         }
-        ExecutionMode::UnregisterHost { protocol, hostname } => {
-            unregister_host(&protocol, &hostname);
+        ExecutionMode::UnregisterHostname { protocol, hostname } => {
+            unregister_hostname(&protocol, &hostname);
         }
         ExecutionMode::Open { url } => {
             // TODO
