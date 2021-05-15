@@ -5,7 +5,7 @@
 
 #include <Windows/AllowWindowsPlatformTypes.h>
 
-struct FWindowsHermesServerModule : FGenericHermesServer, IModuleInterface
+struct FWindowsHermesServerModule : FGenericHermesServer
 {
 	virtual void StartupModule() override final;
 	virtual void ShutdownModule() override final;

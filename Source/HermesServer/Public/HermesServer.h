@@ -8,10 +8,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogHermesServer, Log, All);
 typedef TMap<FString, FString> FHermesQueryParamsMap;
 DECLARE_DELEGATE_TwoParams(FHermesOnRequest, const FString& /* Path */, const FHermesQueryParamsMap& /* QueryParams */);
 
-struct IHermesServerModule
+struct IHermesServerModule : IModuleInterface
 {
-	virtual ~IHermesServerModule() = default;
-
 	virtual void Register(FName Endpoint, FHermesOnRequest Delegate) = 0;
 	virtual void Unregister(FName Endpoint) = 0;
 	virtual FString GetUrl(FName Endpoint, const FString& Path = TEXT("")) = 0;
