@@ -114,7 +114,8 @@ void FWindowsHermesServerModule::Tick(float DeltaTime)
 	Success = ReadFile(ServerHandle, Data.GetData(), PendingMessageSize, &BytesRead, nullptr);
 	if (Success)
 	{
-		const FString StrData(TStringConversion<FUTF8ToTCHAR_Convert>((FUTF8ToTCHAR_Convert::FromType*)Data.GetData(), Data.Num()).Get());
+		TStringConversion<FUTF8ToTCHAR_Convert> Conversion((FUTF8ToTCHAR_Convert::FromType*)Data.GetData(), BytesRead);
+		const FString StrData(Conversion.Length(), Conversion.Get());
 		HandlePath(StrData);
 	}
 	else
