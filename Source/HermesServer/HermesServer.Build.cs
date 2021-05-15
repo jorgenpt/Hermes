@@ -17,6 +17,7 @@ public class HermesServer : ModuleRules
 				"CoreUObject",
 				"HermesURLHandler",
 				"HTTP",
+				"Projects",
 				"UnrealEd",
 			}
 		);

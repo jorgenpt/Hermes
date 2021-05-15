@@ -1,6 +1,8 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #include "GenericHermesServer.h"
 
+#include "Interfaces/IPluginManager.h"
+
 #include <Windows/AllowWindowsPlatformTypes.h>
 
 struct FWindowsHermesServerModule : FGenericHermesServer, IModuleInterface
@@ -10,6 +12,7 @@ struct FWindowsHermesServerModule : FGenericHermesServer, IModuleInterface
 	virtual void Tick(float DeltaTime) override final;
 
 	HANDLE ServerHandle;
+	FProcHandle RegistrationHandle;
 };
 
 IMPLEMENT_MODULE(FWindowsHermesServerModule, HermesServer)
@@ -23,7 +26,19 @@ void FWindowsHermesServerModule::StartupModule()
 	ServerHandle = CreateMailslot(*MailslotName, MAX_MESSAGE_SIZE, 0, nullptr);
 	if (ServerHandle != INVALID_HANDLE_VALUE)
 	{
-		// TODO: Invoke the handler to get registration done
+		const TSharedPtr<IPlugin> HermesCorePlugin = IPluginManager::Get().FindPlugin("HermesCore");
+		checkf(HermesCorePlugin != nullptr, TEXT("Unable to look up ourselves!"));
+		const FString EditorPath = FPaths::ConvertRelativePathToFull(FPlatformProcess::GetModulesDirectory() / FPlatformProcess::ExecutableName(false));
+		const FString OpenCommand = FString::Printf(TEXT("\"%s\" \"%s\" -HermesPath=\"%%1\""), *EditorPath, *FPaths::GetProjectFilePath());
+		const FString RegistrationArguments = FString::Printf(TEXT("register-hostname -- %s %s %s"), GetProtocol(), GetHostname(), *OpenCommand);
+		const FString HermesURLsExe = HermesCorePlugin->GetBaseDir() / TEXT("Binaries") / FPlatformProcess::GetBinariesSubdirectory() / TEXT("hermes_urls.exe");
+
+		UE_LOG(LogHermesServer, Verbose, TEXT("Attempting to register %s://%s using %s %s"), GetProtocol(), GetHostname(), *HermesURLsExe, *RegistrationArguments);
+		RegistrationHandle = FPlatformProcess::CreateProc(*HermesURLsExe, *RegistrationArguments, true, false, false, nullptr, 0, nullptr, nullptr, nullptr);
+		if (!RegistrationHandle.IsValid())
+		{
+			UE_LOG(LogHermesServer, Error, TEXT("Unable to register %s://%s using %s %s"), GetProtocol(), GetHostname(), *HermesURLsExe, *RegistrationArguments);
+		}
 	}
 	else
 	{
@@ -45,6 +60,32 @@ void FWindowsHermesServerModule::ShutdownModule()
 void FWindowsHermesServerModule::Tick(float DeltaTime)
 {
 	FGenericHermesServer::Tick(DeltaTime);
+
+	if (RegistrationHandle.IsValid())
+	{
+		if (!FPlatformProcess::IsProcRunning(RegistrationHandle))
+		{
+			int32 ReturnCode = INDEX_NONE;
+			if (FPlatformProcess::GetProcReturnCode(RegistrationHandle, &ReturnCode))
+			{
+				if (ReturnCode != 0)
+				{
+					UE_LOG(LogHermesServer, Error, TEXT("URL Registration failed with status code %i"), ReturnCode);
+				}
+				else
+				{
+					UE_LOG(LogHermesServer, Verbose, TEXT("URL Registration completed successfully"));
+				}
+			}
+			else
+			{
+				UE_LOG(LogHermesServer, Error, TEXT("Unable to poll return code for completed registration"));
+			}
+
+			FPlatformProcess::CloseProc(RegistrationHandle);
+			RegistrationHandle.Reset();
+		}
+	}
 
 	// Immediate timeout (0ms)
 	DWORD ReadTimeout = 0;
