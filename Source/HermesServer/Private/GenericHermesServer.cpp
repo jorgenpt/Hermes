@@ -55,7 +55,9 @@ void FGenericHermesServer::Unregister(FName Endpoint)
 
 FString FGenericHermesServer::GetUrl(FName Endpoint, const FString& Path)
 {
-	return FString::Printf(TEXT("%s://%s/%s/%s"), GetProtocol(), GetHostname(), *Endpoint.ToString(), *Path);
+	FString ModifiedPath(Path);
+	ModifiedPath.RemoveFromStart(TEXT("/"));
+	return FString::Printf(TEXT("%s://%s/%s/%s"), GetProtocol(), GetHostname(), *Endpoint.ToString(), *ModifiedPath);
 }
 
 void FGenericHermesServer::Tick(float DeltaTime)
