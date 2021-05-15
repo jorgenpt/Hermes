@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use log::{debug, info, trace, warn};
 use mail_slot::{MailslotClient, MailslotName};
 use simplelog::*;
@@ -6,7 +6,7 @@ use std::{
     fs::{File, OpenOptions},
     io,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
 };
 use structopt::StructOpt;
 use url;
@@ -210,14 +210,17 @@ fn open_url(url: &str) -> Result<()> {
 
     let could_send = {
         let slot = MailslotName::local(&format!(r"bitSpatter\Hermes\{}\{}", protocol, hostname));
+        trace!("Attempting to send URL to mailslot {}", slot.to_string());
         if let Ok(mut client) = MailslotClient::new(&slot) {
             if let Err(error) = client.send_message(path.as_bytes()) {
                 warn!("Could not send mail slot message to {}: {} -- assuming application is shutting down, starting a new one", slot.to_string(), error);
                 false
             } else {
+                trace!("Delivered using Mailslot");
                 true
             }
         } else {
+            trace!("Could not connect to Mailslot, assuming application is not running");
             false
         }
     };
@@ -236,18 +239,13 @@ fn open_url(url: &str) -> Result<()> {
         };
 
         info!("executing {:?} with arguments {:?}", exe_name, args);
-        let exit_status = Command::new(&exe_name)
+        Command::new(&exe_name)
             .args(&args)
-            .status()
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .stdin(Stdio::null())
+            .spawn()
             .with_context(|| format!("Failed to execute {:?} {:?}", exe_name, args))?;
-        if !exit_status.success() {
-            bail!(
-                "Failure exit status {} when running {:?} with arguments {:?}",
-                exit_status,
-                exe_name,
-                args
-            );
-        }
     }
 
     Ok(())
@@ -383,6 +381,10 @@ fn get_debug_args(register_with_debugging: bool) -> Option<&'static str> {
 
 pub fn main() -> Result<()> {
     let options = init()?;
+    trace!(
+        "running from directory {}",
+        std::env::current_dir().unwrap_or_default().display()
+    );
 
     match options.mode {
         ExecutionMode::Register {
