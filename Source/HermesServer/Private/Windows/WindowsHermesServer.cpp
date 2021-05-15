@@ -65,15 +65,14 @@ void FWindowsHermesServerModule::Tick(float DeltaTime)
 		return;
 	}
 
-	TArray<TCHAR> Data;
-	Data.SetNumUninitialized(PendingMessageSize / sizeof(TCHAR));
+	TArray<UTF8CHAR> Data;
+	Data.SetNumUninitialized(PendingMessageSize);
 
 	DWORD BytesRead = 0;
 	Success = ReadFile(ServerHandle, Data.GetData(), PendingMessageSize, &BytesRead, nullptr);
 	if (Success)
 	{
-		// TODO: Send data as UTF8? As wchar_t? Don't rely on TCHAR!
-		const FString StrData(BytesRead / sizeof(TCHAR), Data.GetData());
+		const FString StrData(TStringConversion<FUTF8ToTCHAR_Convert>((FUTF8ToTCHAR_Convert::FromType*)Data.GetData(), Data.Num()).Get());
 		HandlePath(StrData);
 	}
 }
