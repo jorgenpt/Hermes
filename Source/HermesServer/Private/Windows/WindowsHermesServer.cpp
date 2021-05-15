@@ -1,7 +1,7 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #include "GenericHermesServer.h"
 
-#include "Interfaces/IPluginManager.h"
+#include <Interfaces/IPluginManager.h>
 
 #include <Windows/AllowWindowsPlatformTypes.h>
 
@@ -23,6 +23,7 @@ static constexpr int32 MAX_MESSAGE_SIZE = 32 * 1024 + 256;
 void FWindowsHermesServerModule::StartupModule()
 {
 	const FString MailslotName = FString::Printf(TEXT("\\\\.\\mailslot\\bitSpatter\\Hermes\\%s\\%s"), GetProtocol(), GetHostname());
+	UE_LOG(LogHermesServer, Verbose, TEXT("Attempting to create Mailslot %s"), *MailslotName);
 	ServerHandle = CreateMailslot(*MailslotName, MAX_MESSAGE_SIZE, 0, nullptr);
 	if (ServerHandle != INVALID_HANDLE_VALUE)
 	{
@@ -115,6 +116,12 @@ void FWindowsHermesServerModule::Tick(float DeltaTime)
 	{
 		const FString StrData(TStringConversion<FUTF8ToTCHAR_Convert>((FUTF8ToTCHAR_Convert::FromType*)Data.GetData(), Data.Num()).Get());
 		HandlePath(StrData);
+	}
+	else
+	{
+		TCHAR ErrorMsg[1024];
+		FPlatformMisc::GetSystemErrorMessage(ErrorMsg, UE_ARRAY_COUNT(ErrorMsg), 0);
+		UE_LOG(LogHermesServer, Error, TEXT("Unable to read message of %i bytes from mailslot: %s"), PendingMessageSize, ErrorMsg);
 	}
 }
 

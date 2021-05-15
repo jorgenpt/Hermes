@@ -1,3 +1,4 @@
+// Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 use anyhow::{anyhow, Context, Result};
 use log::{debug, info, trace, warn};
 use mail_slot::{MailslotClient, MailslotName};

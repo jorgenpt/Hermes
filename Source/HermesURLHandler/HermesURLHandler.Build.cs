@@ -1,5 +1,4 @@
-
-using System;
+// Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 using System.IO;
 using UnrealBuildTool;
 

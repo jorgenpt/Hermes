@@ -1,3 +1,4 @@
+// Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #![deny(clippy::all)]
 // We use the console subsystem in debug builds, but use the Windows subsystem in release
 // builds so we don't have to allocate a console and pop up a command line window.

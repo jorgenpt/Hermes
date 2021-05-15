@@ -23,6 +23,7 @@ ETickableTickType FGenericHermesServer::GetTickableTickType() const
 
 void FGenericHermesServer::Register(FName Endpoint, FHermesOnRequest Delegate)
 {
+	UE_LOG(LogHermesServer, Verbose, TEXT("Registering handler for endpoint %s"), *Endpoint.ToString());
 	if (!ensureAlwaysMsgf(!Endpoints.Contains(Endpoint),
 	                      TEXT(
 		                      "Registering duplicate delegate for endpoint %s, is this being unintentionally called twice (or are you forgetting to unregister)?"
@@ -41,6 +42,7 @@ void FGenericHermesServer::Register(FName Endpoint, FHermesOnRequest Delegate)
 
 void FGenericHermesServer::Unregister(FName Endpoint)
 {
+	UE_LOG(LogHermesServer, Verbose, TEXT("Unregistering handler for endpoint %s"), *Endpoint.ToString());
 	const int32 NumRemoved = Endpoints.RemoveAll([Endpoint](const FRegisteredEndpoint& RegisteredEndpoint)
 	{
 		return RegisteredEndpoint == Endpoint;
@@ -63,6 +65,7 @@ void FGenericHermesServer::Tick(float DeltaTime)
 		FString LaunchPath;
 		if (FParse::Value(FCommandLine::Get(), TEXT("-HermesPath="), LaunchPath))
 		{
+			UE_LOG(LogHermesServer, Verbose, TEXT("Handling command line path %s"), *LaunchPath);
 			HandlePath(LaunchPath);
 		}
 	}
@@ -148,8 +151,9 @@ void FGenericHermesServer::HandlePath(const FString& FullPath) const
 		// all the blueprints yet.
 		UE_LOG(LogHermesServer, Error,
 		       TEXT("There is no handler registered for the endpoint '%s' in path '%s'"), *EndpointName, *FullPath);
-		return;
 	}
-
-	Endpoint->Delegate.Execute(Path, QueryParameters);
+	else
+	{
+		Endpoint->Delegate.Execute(Path, QueryParameters);
+	}
 }

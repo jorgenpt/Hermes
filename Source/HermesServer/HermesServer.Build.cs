@@ -1,5 +1,4 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
-
 using UnrealBuildTool;
 
 public class HermesServer : ModuleRules

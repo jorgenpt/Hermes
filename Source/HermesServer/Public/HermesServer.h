@@ -1,7 +1,7 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #pragma once
 
-#include "CoreMinimal.h"
+#include <CoreMinimal.h>
 
 DECLARE_LOG_CATEGORY_EXTERN(LogHermesServer, Log, All);
 
