@@ -53,20 +53,20 @@ void FGenericHermesServer::Unregister(FName Endpoint)
 
 FString FGenericHermesServer::GetUrl(FName Endpoint, const FString& Path)
 {
-	return FString::Printf(TEXT("%s://%s/%s/%s"), GetProtocol(), GetHostName(), *Endpoint.ToString(), *Path);
+	return FString::Printf(TEXT("%s://%s/%s/%s"), GetProtocol(), GetHostname(), *Endpoint.ToString(), *Path);
 }
 
 void FGenericHermesServer::Tick(float DeltaTime)
 {
-	if (!bHasCheckedLaunchURL)
+	if (!bHasCheckedLaunchPath)
 	{
-		FString LaunchURL;
-		if (FParse::Value(FCommandLine::Get(), TEXT("-HermesURL="), LaunchURL))
+		FString LaunchPath;
+		if (FParse::Value(FCommandLine::Get(), TEXT("-HermesPath="), LaunchPath))
 		{
-			HandleUrl(LaunchURL);
+			HandlePath(LaunchPath);
 		}
 	}
-	bHasCheckedLaunchURL = true;
+	bHasCheckedLaunchPath = true;
 }
 
 const TCHAR* FGenericHermesServer::GetProtocol() const
@@ -75,58 +75,22 @@ const TCHAR* FGenericHermesServer::GetProtocol() const
 	return TEXT("hermes");
 }
 
-const TCHAR* FGenericHermesServer::GetHostName() const
+const TCHAR* FGenericHermesServer::GetHostname() const
 {
 	// TODO: Configurable -- INI, or project-specific override
 	return FApp::GetProjectName();
 }
 
-void FGenericHermesServer::HandleUrl(const FString& Url) const
+void FGenericHermesServer::HandlePath(const FString& FullPath) const
 {
-	UE_LOG(LogHermesServer, Display, TEXT("Dispatching URL '%s'"), *Url);
+	UE_LOG(LogHermesServer, Display, TEXT("Dispatching path '%s'"), *FullPath);
 
-	// Find the protocol -- everything up to ://
-	const TCHAR* ProtocolBeg = *Url;
-	const TCHAR* ProtocolEnd = FCString::Strstr(ProtocolBeg, TEXT("://"));
-	if (!ensureAlwaysMsgf(ProtocolEnd != nullptr,
-	                      TEXT("Received invalid URL '%s', expected '://' after protocol."), *Url))
+	// Identify the endpoint -- the first path component -- which decides where we route this path.
+	const TCHAR* EndpointNameBeg = *FullPath;
+	if (*EndpointNameBeg == TEXT('/'))
 	{
-		UE_LOG(LogHermesServer, Error, TEXT("URL '%s' is malformed. Could not extract the protocol."), *Url);
-		return;
+		EndpointNameBeg++;
 	}
-
-	// Make sure it's our local protocol!
-	const FString Protocol(ProtocolEnd - ProtocolBeg, ProtocolBeg);
-	if (!ensureAlwaysMsgf(Protocol.Equals(GetProtocol(), ESearchCase::IgnoreCase),
-	                      TEXT("Received invalid URL '%s', expected protocol '%s'."), *Url, GetProtocol()))
-	{
-		UE_LOG(LogHermesServer, Error, TEXT("URL '%s' has an unexpected protocol '%s', expected '%s'."), *Url,
-		       *Protocol, GetProtocol());
-		return;
-	}
-
-	// Find the host between the :// and the first /
-	const TCHAR* HostBeg = ProtocolEnd + FCString::Strlen(TEXT("://"));
-	const TCHAR* HostEnd = FCString::Strchr(HostBeg, TEXT('/'));
-	if (!ensureAlwaysMsgf(HostEnd != nullptr, TEXT("Received invalid URL '%s', expected a slash after hostname."),
-	                      *Url))
-	{
-		UE_LOG(LogHermesServer, Error, TEXT("URL '%s' is malformed. Could not extract the host."), *Url);
-		return;
-	}
-
-	// Make sure it's our local "hostname"!
-	const FString Host(HostEnd - HostBeg, HostBeg);
-	if (!ensureAlwaysMsgf(Host.Equals(GetHostName(), ESearchCase::IgnoreCase),
-	                      TEXT("Received invalid URL '%s', expected host name '%s'."), *Url, GetHostName()))
-	{
-		UE_LOG(LogHermesServer, Error, TEXT("URL '%s' has an unexpected host '%s', expected '%s'"), *Url, *Host,
-		       GetHostName());
-		return;
-	}
-
-	// Identify the endpoint -- the first path component -- which decides where we route this URL.
-	const TCHAR* EndpointNameBeg = HostEnd + 1;
 	const TCHAR* EndpointNameEnd = FCString::Strchr(EndpointNameBeg, TEXT('/'));
 	if (EndpointNameEnd == nullptr)
 	{
@@ -135,7 +99,7 @@ void FGenericHermesServer::HandleUrl(const FString& Url) const
 	}
 	const FString EndpointName(EndpointNameEnd - EndpointNameBeg, EndpointNameBeg);
 
-	// The rest of the URL is the path, unless there's a query string (?foo=bar)
+	// The rest of it is the endpoint-specific subpath, unless there's a query string (?foo=bar)
 	const TCHAR* PathBeg = EndpointNameEnd;
 	const TCHAR* PathEnd = FCString::Strchr(PathBeg, TEXT('?'));
 	if (PathEnd == nullptr)
@@ -168,7 +132,9 @@ void FGenericHermesServer::HandleUrl(const FString& Url) const
 		}
 	}
 
-	UE_LOG(LogHermesServer, Verbose, TEXT("Parsed URL:\n  - Endpoint '%s'\n  - Path '%s'\n  - %i parameter(s):"),
+	// TODO: Should we forward URL fragments too?
+
+	UE_LOG(LogHermesServer, Verbose, TEXT("Parsed path:\n  - Endpoint '%s'\n  - Subpath '%s'\n  - %i parameter(s):"),
 	       *EndpointName, *Path, QueryParameters.Num());
 	for (const auto& Pair : QueryParameters)
 	{
@@ -181,7 +147,7 @@ void FGenericHermesServer::HandleUrl(const FString& Url) const
 		// TODO: If I implement blueprint handlers, we probably want to defer dispatch here if we haven't discovered
 		// all the blueprints yet.
 		UE_LOG(LogHermesServer, Error,
-		       TEXT("There is no handler registered for the endpoint '%s' in URL '%s'"), *EndpointName, *Url);
+		       TEXT("There is no handler registered for the endpoint '%s' in path '%s'"), *EndpointName, *FullPath);
 		return;
 	}
 

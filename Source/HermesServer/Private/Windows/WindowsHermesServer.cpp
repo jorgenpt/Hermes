@@ -19,7 +19,7 @@ static constexpr int32 MAX_MESSAGE_SIZE = 32 * 1024 + 256;
 
 void FWindowsHermesServerModule::StartupModule()
 {
-	const FString MailslotName = FString::Printf(TEXT("\\\\.\\mailslot\\bitSpatter\\Hermes\\%s\\%s"), GetProtocol(), GetHostName());
+	const FString MailslotName = FString::Printf(TEXT("\\\\.\\mailslot\\bitSpatter\\Hermes\\%s\\%s"), GetProtocol(), GetHostname());
 	ServerHandle = CreateMailslot(*MailslotName, MAX_MESSAGE_SIZE, 0, nullptr);
 	if (ServerHandle != INVALID_HANDLE_VALUE)
 	{
@@ -74,7 +74,7 @@ void FWindowsHermesServerModule::Tick(float DeltaTime)
 	{
 		// TODO: Send data as UTF8? As wchar_t? Don't rely on TCHAR!
 		const FString StrData(BytesRead / sizeof(TCHAR), Data.GetData());
-		HandleUrl(StrData);
+		HandlePath(StrData);
 	}
 }
 

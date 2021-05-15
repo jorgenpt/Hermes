@@ -30,11 +30,11 @@ protected: // Implementation of FTickableEditorObject
 	virtual ETickableTickType GetTickableTickType() const final override;
 
 private: // State
-	bool bHasCheckedLaunchURL = false;
+	bool bHasCheckedLaunchPath = false;
 	TArray<FRegisteredEndpoint> Endpoints;
 
 protected: // API for platform implementations
 	const TCHAR* GetProtocol() const;
-	const TCHAR* GetHostName() const;
-	void HandleUrl(const FString& Url) const;
+	const TCHAR* GetHostname() const;
+	void HandlePath(const FString& FullPath) const;
 };
