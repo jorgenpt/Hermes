@@ -1,4 +1,8 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
+#include "HermesContentEndpoint.h"
+
+#include "HermesContentEndpointEditorExtension.h"
+
 #include <AssetRegistryModule.h>
 #include <ContentBrowserModule.h>
 #include <CoreMinimal.h>
@@ -8,9 +12,11 @@
 #include <MainFrame.h>
 #include <Subsystems/AssetEditorSubsystem.h>
 
+#define LOCTEXT_NAMESPACE "Editor.HermesContentEndpoint"
+
 DEFINE_LOG_CATEGORY_STATIC(LogHermesContentEndpoint, Log, All);
 
-static const FName NAME_EndpointId(TEXT("content"));
+const FName NAME_EndpointId(TEXT("content"));
 
 struct FPendingRequest
 {
@@ -28,6 +34,7 @@ struct FHermesContentEndpointModule : IModuleInterface
 
 	TArray<FPendingRequest> PendingRequests;
 	FDelegateHandle AssetRegistryLoadedDelegateHandle;
+	FHermesContentEndpointEditorExtension EditorExtension;
 };
 
 IMPLEMENT_MODULE(FHermesContentEndpointModule, HermesContentEndpoint);
@@ -46,10 +53,16 @@ void FHermesContentEndpointModule::StartupModule()
 
 	IHermesServerModule& Hermes = FModuleManager::LoadModuleChecked<IHermesServerModule>("HermesServer");
 	Hermes.Register(NAME_EndpointId, FHermesOnRequest::CreateRaw(this, &FHermesContentEndpointModule::OnRequest));
+
+	EditorExtension.InstallContentBrowserExtension();
+	EditorExtension.InstallAssetEditorExtension();
 }
 
 void FHermesContentEndpointModule::ShutdownModule()
 {
+	EditorExtension.UninstallAssetEditorExtension();
+	EditorExtension.UninstallContentBrowserExtension();
+
 	IHermesServerModule& Hermes = FModuleManager::GetModuleChecked<IHermesServerModule>("HermesServer");
 	Hermes.Unregister(NAME_EndpointId);
 
@@ -129,3 +142,5 @@ void FHermesContentEndpointModule::OnRequest(const FString& Path, const FHermesQ
 		ParentWindow->GetNativeWindow()->HACK_ForceToFront();
 	}
 }
+
+#undef LOCTEXT_NAMESPACE

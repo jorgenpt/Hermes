@@ -8,13 +8,17 @@ public class HermesContentEndpoint : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new[]
 			{
+				"ApplicationCore",
 				"AssetRegistry",
 				"ContentBrowser",
 				"Core",
 				"CoreUObject",
+				"EditorStyle",
 				"Engine",
 				"HermesServer",
+				"InputCore",
 				"MainFrame",
+				"ToolMenus",
 				"UnrealEd",
 			}
 		);
