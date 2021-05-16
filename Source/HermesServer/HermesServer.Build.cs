@@ -5,8 +5,6 @@ public class HermesServer : ModuleRules
 {
 	public HermesServer(ReadOnlyTargetRules Target) : base(Target)
 	{
-		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-
 		PrivateIncludePaths.Add("HermesServer/Private");
 
 		PublicDependencyModuleNames.Add("Core");
@@ -14,6 +12,7 @@ public class HermesServer : ModuleRules
 			new[]
 			{
 				"CoreUObject",
+				"DeveloperSettings",
 				"HermesURLHandler",
 				"HTTP",
 				"Projects",

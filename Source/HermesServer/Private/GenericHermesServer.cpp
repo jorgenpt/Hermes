@@ -1,6 +1,8 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #include "GenericHermesServer.h"
 
+#include "HermesPluginSettings.h"
+
 #include <PlatformHttp.h>
 
 DEFINE_LOG_CATEGORY(LogHermesServer);
@@ -76,13 +78,23 @@ void FGenericHermesServer::Tick(float DeltaTime)
 
 const TCHAR* FGenericHermesServer::GetProtocol() const
 {
-	// TODO: Configurable in INI
-	return TEXT("hermes");
+	const FString& Protocol = GetDefault<UHermesPluginSettings>()->UrlProtocol;
+	if (!Protocol.IsEmpty())
+	{
+		return *Protocol;
+	}
+
+	return TEXT("hue4");
 }
 
 const TCHAR* FGenericHermesServer::GetHostname() const
 {
-	// TODO: Configurable -- INI, or project-specific override
+	const FString& Hostname = GetDefault<UHermesPluginSettings>()->UrlHostname;
+	if (!Hostname.IsEmpty())
+	{
+		return *Hostname;
+	}
+
 	return FApp::GetProjectName();
 }
 
