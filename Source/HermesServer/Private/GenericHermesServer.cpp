@@ -184,8 +184,14 @@ void FGenericHermesServer::HandlePath(const FString& FullPath) const
 	}
 }
 
-bool FGenericHermesServer::RefreshRegisteredScheme()
+void FGenericHermesServer::RefreshRegisteredScheme()
 {
+	// Don't update the schema if we're shutting down.
+	if (!GIsRunning)
+	{
+		return;
+	}
+
 	const FName FeatureName(IHermesUriSchemeProvider::GetModularFeatureName());
 	IModularFeatures& Features = IModularFeatures::Get();
 	TArray<IHermesUriSchemeProvider*> Providers = Features.GetModularFeatureImplementations<
@@ -252,10 +258,7 @@ bool FGenericHermesServer::RefreshRegisteredScheme()
 	if (PickedScheme.IsSet())
 	{
 		UpdateScheme(*PickedScheme);
-		return true;
 	}
-
-	return false;
 }
 
 void FGenericHermesServer::UpdateScheme(const FString& Scheme)

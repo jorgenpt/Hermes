@@ -60,5 +60,5 @@ private: // Implementation details
 	 * Pick the best scheme, preferring scheme providers first, then the scheme provider from our last run (if any),
 	 * then the scheme configured in the settings.
 	 */
-	bool RefreshRegisteredScheme();
+	void RefreshRegisteredScheme();
 };
