@@ -12,18 +12,15 @@ class UHermesPluginSettings : public UDeveloperSettings
 
 public:
 	UPROPERTY(Config, EditAnywhere, meta = (
-		DisplayName = "URL Protocol",
-		ToolTip = "The protocol to use for our URLs, defaults to hue4://",
+		DisplayName = "Default URI Scheme",
+		ToolTip =
+		"The scheme to use for our URIs if there is no UriSchemeProvider -- should be unique to each project / branch",
 		ConfigRestartRequired = true))
-	FString UrlProtocol = TEXT("hue4");
-
-	UPROPERTY(Config, EditAnywhere, meta = (
-		DisplayName = "URL Hostname",
-		ToolTip = "The hostname used for our URLs, defaults to the project name if left empty",
-		ConfigRestartRequired = true))
-	FString UrlHostname;
+	FString DefaultUriScheme;
 
 public:
+	UHermesPluginSettings(const FObjectInitializer& ObjectInitializer);
+
 	virtual FName GetCategoryName() const override
 	{
 		return FName(TEXT("Plugins"));

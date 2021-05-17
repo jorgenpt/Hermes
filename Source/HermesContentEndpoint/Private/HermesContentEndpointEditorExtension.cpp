@@ -54,7 +54,7 @@ void FHermesContentEndpointEditorExtension::CopyEndpointURLsToClipboard(TArray<F
 	FString ClipboardText;
 	for (const FName& Package : Packages)
 	{
-		ClipboardText += Hermes.GetUrl(NAME_EndpointId, *Package.ToString());
+		ClipboardText += Hermes.GetUri(NAME_EndpointId, *Package.ToString());
 		if (OptionalSuffix)
 		{
 			ClipboardText += OptionalSuffix;

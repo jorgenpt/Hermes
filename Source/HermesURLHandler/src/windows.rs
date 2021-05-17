@@ -30,12 +30,12 @@ fn get_configuration_registry_key(protocol: &str) -> String {
     format!(r"Software\bitSpatter\Hermes\Protocols\{}", protocol)
 }
 
-fn get_hosts_registry_key(protocol: &str) -> String {
-    get_configuration_registry_key(protocol) + r"\Hosts"
-}
-
-/// Register associations with Windows to handle our protocol
-fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()> {
+/// Register associations with Windows to handle our protocol, and the command we'll invoke
+fn register_command(
+    protocol: &str,
+    commandline: &Vec<String>,
+    extra_args: Option<&str>,
+) -> io::Result<()> {
     use std::env::current_exe;
 
     let exe_path = current_exe()?;
@@ -73,33 +73,20 @@ fn register_protocol(protocol: &str, extra_args: Option<&str>) -> io::Result<()>
         protocol_path, open_command
     );
 
-    Ok(())
-}
-
-/// Register a new hostname & command pair
-fn register_hostname(
-    protocol: &str,
-    hostname: &str,
-    commandline: &Vec<String>,
-    extra_args: Option<&str>,
-) -> io::Result<()> {
-    info!("registering hostname for {}://{}", protocol, hostname);
-    register_protocol(protocol, extra_args)?;
-
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let hosts_path = get_hosts_registry_key(&protocol);
-    let (hosts, _) = hkcu.create_subkey(&hosts_path)?;
-    hosts.set_value(&hostname, commandline)?;
+    info!("registering command for {}://", protocol);
+    let config_path = get_configuration_registry_key(&protocol);
+    let (config, _) = hkcu.create_subkey(&config_path)?;
+    config.set_value("command", commandline)?;
 
     debug!(
-        r"set HKEY_CURRENT_USER\{}\{} to {:?}",
-        hosts_path, hostname, commandline
+        r"set HKEY_CURRENT_USER\{}\command to {:?}",
+        config_path, commandline
     );
 
     Ok(())
 }
 
-/// Remove all the registry keys that we've set up
+/// Remove all the registry keys that we've set up for a protocol
 fn unregister_protocol(protocol: &str) {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
 
@@ -140,32 +127,7 @@ fn unregister_protocol(protocol: &str) {
     }
 }
 
-/// Remove a previous hostname registration
-fn unregister_hostname(protocol: &str, hostname: &str) {
-    info!("unregistering handler for {}://{}", protocol, hostname);
-
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let hosts_path = get_hosts_registry_key(protocol);
-    if let Ok(hosts) = hkcu.open_subkey_with_flags(&hosts_path, ENUMERATE_AND_DELETE_FLAGS) {
-        let _ = hosts.delete_value(hostname);
-
-        // If this was the last registration, unregister the entire protocol
-        if hosts.enum_values().next().is_none() {
-            info!(
-                "hostname {} was the last one registered for {}://, removing protocol registration",
-                hostname, protocol
-            );
-            unregister_protocol(protocol);
-        }
-    } else {
-        trace!(
-            "couldn't open registry key {}, assuming there are no host registrations",
-            hosts_path
-        );
-        unregister_protocol(protocol);
-    }
-}
-
+/// Combine the path, query string, and fragment from the given Url
 fn get_path_and_extras(url: &url::Url) -> String {
     let mut path = url.path().to_owned();
 
@@ -190,30 +152,29 @@ fn open_url(url: &str) -> Result<()> {
         .host_str()
         .ok_or(anyhow!("could not parse hostname from {}", url))?;
     let path = get_path_and_extras(&url);
+    let full_path = format!("/{}{}", hostname, path);
     trace!(
-        "split url {} into protocol={}, hostname={}, path={}",
+        "split url {} into protocol={}, full_path={} (hostname={} + path={})",
         url,
         protocol,
+        full_path,
         hostname,
         path
     );
 
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    let hosts = hkcu
-        .open_subkey(get_hosts_registry_key(protocol))
+    let config = hkcu
+        .open_subkey(get_configuration_registry_key(protocol))
         .with_context(|| format!("no hostnames registered when trying to handle url {}", url))?;
-    let host_handler: Vec<_> = hosts.get_value(hostname).with_context(|| {
-        format!(
-            "hostname {} not registered when trying to handle url {}",
-            hostname, url
-        )
-    })?;
+    let protocol_command: Vec<_> = config
+        .get_value("command")
+        .with_context(|| format!("command not registered when trying to handle url {}", url))?;
 
     let could_send = {
-        let slot = MailslotName::local(&format!(r"bitSpatter\Hermes\{}\{}", protocol, hostname));
+        let slot = MailslotName::local(&format!(r"bitSpatter\Hermes\{}", protocol));
         trace!("Attempting to send URL to mailslot {}", slot.to_string());
         if let Ok(mut client) = MailslotClient::new(&slot) {
-            if let Err(error) = client.send_message(path.as_bytes()) {
+            if let Err(error) = client.send_message(full_path.as_bytes()) {
                 warn!("Could not send mail slot message to {}: {} -- assuming application is shutting down, starting a new one", slot.to_string(), error);
                 false
             } else {
@@ -228,14 +189,19 @@ fn open_url(url: &str) -> Result<()> {
 
     if !could_send {
         let (exe_name, args) = {
-            debug!("registered handler for {}: {:?}", hostname, host_handler);
-            let mut host_handler = host_handler.into_iter();
-            let exe_name = host_handler
+            debug!(
+                "registered handler for {}: {:?}",
+                protocol, protocol_command
+            );
+            let mut protocol_command = protocol_command.into_iter();
+            let exe_name = protocol_command
                 .next()
                 .ok_or(anyhow!("empty command specified for hostname {}", hostname))?;
 
             // TODO: Handle %%1 as an escape?
-            let args: Vec<_> = host_handler.map(|arg| arg.replace("%1", &path)).collect();
+            let args: Vec<_> = protocol_command
+                .map(|arg| arg.replace("%1", &full_path))
+                .collect();
             (exe_name, args)
         };
 
@@ -286,17 +252,6 @@ enum ExecutionMode {
         /// Enable debug logging for this registration
         #[structopt(long)]
         register_with_debugging: bool,
-    },
-
-    /// Register a specific hostname (and, if needed, this EXE as an URL protocol handler)
-    RegisterHostname {
-        /// The protocol this hostname will be registered for (this will implicity invoke `register` for the protocol if needed)
-        protocol: String,
-        /// Enable debug logging for this protocol
-        #[structopt(long)]
-        register_with_debugging: bool,
-        /// The hostname to register a handler for
-        hostname: String,
         /// The command line that will handle the registration if needed, where %1 is the placeholder for the path
         commandline: Vec<String>,
     },
@@ -305,14 +260,6 @@ enum ExecutionMode {
     Unregister {
         /// The protocol we will delete the registration for
         protocol: String,
-    },
-
-    /// Unregister a specific host name
-    UnregisterHostname {
-        /// The protocol this hostname will be unregistered from
-        protocol: String,
-        /// The hostname whose handler we're unregistering
-        hostname: String,
     },
 }
 
@@ -390,32 +337,19 @@ pub fn main() -> Result<()> {
     match options.mode {
         ExecutionMode::Register {
             protocol,
-            register_with_debugging,
-        } => {
-            info!("registering handler for {}://", protocol);
-            register_protocol(&protocol, get_debug_args(register_with_debugging))
-                .with_context(|| format!("Failed to register handler for {}://", protocol))?;
-        }
-        ExecutionMode::RegisterHostname {
-            protocol,
-            hostname,
             commandline,
             register_with_debugging,
         } => {
-            register_hostname(
+            register_command(
                 &protocol,
-                &hostname,
                 &commandline,
                 get_debug_args(register_with_debugging),
             )
-            .with_context(|| format!("Failed to register host for {}://{}", protocol, hostname))?;
+            .with_context(|| format!("Failed to register command for {}://", protocol))?;
         }
         ExecutionMode::Unregister { protocol } => {
             info!("unregistering handler for {}://", protocol);
             unregister_protocol(&protocol);
-        }
-        ExecutionMode::UnregisterHostname { protocol, hostname } => {
-            unregister_hostname(&protocol, &hostname);
         }
         ExecutionMode::Open { url } => {
             open_url(&url).with_context(|| format!("Failed to open url {}", url))?;

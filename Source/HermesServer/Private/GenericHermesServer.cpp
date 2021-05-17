@@ -2,11 +2,55 @@
 #include "GenericHermesServer.h"
 
 #include "HermesPluginSettings.h"
+#include "HermesUriSchemeProvider.h"
 
+#include <Features/IModularFeatures.h>
 #include <PlatformHttp.h>
 
 DEFINE_LOG_CATEGORY(LogHermesServer);
 DECLARE_STATS_GROUP(TEXT("HermesServer"), STATGROUP_HermesServer, STATCAT_Advanced);
+
+void FGenericHermesServer::StartupModule()
+{
+	RefreshRegisteredScheme(/* bIgnoreLastScheme= */ false);
+
+	auto OnModularFeaturesChanged = [&](const FName& Type, class IModularFeature*)
+	{
+		if (Type == IHermesUriSchemeProvider::GetModularFeatureName())
+		{
+			RefreshRegisteredScheme(/* bIgnoreLastScheme= */ false);
+		}
+	};
+
+	IModularFeatures& Features = IModularFeatures::Get();
+	OnModularFeatureRegisteredHandle = Features.OnModularFeatureRegistered().AddLambda(OnModularFeaturesChanged);
+	OnModularFeatureUnregisteredHandle = Features.OnModularFeatureUnregistered().AddLambda(OnModularFeaturesChanged);
+}
+
+void FGenericHermesServer::ShutdownModule()
+{
+	IModularFeatures& Features = IModularFeatures::Get();
+	Features.OnModularFeatureRegistered().Remove(OnModularFeatureRegisteredHandle);
+	Features.OnModularFeatureUnregistered().Remove(OnModularFeatureUnregisteredHandle);
+}
+
+void FGenericHermesServer::Tick(float DeltaTime)
+{
+	if (!bFullyInitialized)
+	{
+		// Any modular features should've been registered by now, so refresh the scheme and ignore the saved LastScheme
+		RefreshRegisteredScheme(/* bIgnoreLastScheme= */ true);
+
+		FString LaunchPath;
+		if (FParse::Value(FCommandLine::Get(), TEXT("-HermesPath="), LaunchPath))
+		{
+			UE_LOG(LogHermesServer, Verbose, TEXT("Handling command line path %s"), *LaunchPath);
+			HandlePath(LaunchPath);
+		}
+
+		bFullyInitialized = true;
+	}
+}
 
 TStatId FGenericHermesServer::GetStatId() const
 {
@@ -37,7 +81,7 @@ void FGenericHermesServer::Register(FName Endpoint, FHermesOnRequest Delegate)
 		});
 	}
 
-	FRegisteredEndpoint& RegisteredEndpoint = Endpoints[Endpoints.Emplace()];
+	FRegisteredEndpoint& RegisteredEndpoint = Endpoints.Emplace_GetRef();
 	RegisteredEndpoint.Name = Endpoint;
 	RegisteredEndpoint.Delegate = Delegate;
 }
@@ -55,47 +99,17 @@ void FGenericHermesServer::Unregister(FName Endpoint)
 	                 ), *Endpoint.ToString());
 }
 
-FString FGenericHermesServer::GetUrl(FName Endpoint, const FString& Path)
+FString FGenericHermesServer::GetUri(FName Endpoint, const FString& Path)
 {
-	FString ModifiedPath(Path);
-	ModifiedPath.RemoveFromStart(TEXT("/"));
-	return FString::Printf(TEXT("%s://%s/%s/%s"), GetProtocol(), GetHostname(), *Endpoint.ToString(), *ModifiedPath);
-}
-
-void FGenericHermesServer::Tick(float DeltaTime)
-{
-	if (!bHasCheckedLaunchPath)
+	if (PreviouslyRegisteredScheme.IsSet())
 	{
-		FString LaunchPath;
-		if (FParse::Value(FCommandLine::Get(), TEXT("-HermesPath="), LaunchPath))
-		{
-			UE_LOG(LogHermesServer, Verbose, TEXT("Handling command line path %s"), *LaunchPath);
-			HandlePath(LaunchPath);
-		}
-	}
-	bHasCheckedLaunchPath = true;
-}
-
-const TCHAR* FGenericHermesServer::GetProtocol() const
-{
-	const FString& Protocol = GetDefault<UHermesPluginSettings>()->UrlProtocol;
-	if (!Protocol.IsEmpty())
-	{
-		return *Protocol;
+		FString ModifiedPath(Path);
+		ModifiedPath.RemoveFromStart(TEXT("/"));
+		return FString::Printf(TEXT("%s://%s/%s"), *PreviouslyRegisteredScheme.GetValue(), *Endpoint.ToString(),
+		                       *ModifiedPath);
 	}
 
-	return TEXT("hue4");
-}
-
-const TCHAR* FGenericHermesServer::GetHostname() const
-{
-	const FString& Hostname = GetDefault<UHermesPluginSettings>()->UrlHostname;
-	if (!Hostname.IsEmpty())
-	{
-		return *Hostname;
-	}
-
-	return FApp::GetProjectName();
+	return FString();
 }
 
 void FGenericHermesServer::HandlePath(const FString& FullPath) const
@@ -169,5 +183,87 @@ void FGenericHermesServer::HandlePath(const FString& FullPath) const
 	else
 	{
 		Endpoint->Delegate.Execute(Path, QueryParameters);
+	}
+}
+
+bool FGenericHermesServer::RefreshRegisteredScheme(bool bFullyInitialized)
+{
+	const FName FeatureName(IHermesUriSchemeProvider::GetModularFeatureName());
+	IModularFeatures& Features = IModularFeatures::Get();
+	TArray<IHermesUriSchemeProvider*> Providers = Features.GetModularFeatureImplementations<
+		IHermesUriSchemeProvider>(FeatureName);
+
+	// First prefer providers, in order of registration
+	bool bPickedScheme = false;
+	for (IHermesUriSchemeProvider* Provider : Providers)
+	{
+		TOptional<FString> Scheme = Provider->GetPreferredScheme();
+		if (Scheme.IsSet())
+		{
+			bPickedScheme = true;
+			UpdateScheme(*Scheme);
+			GConfig->SetString(
+				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), **Scheme, GEditorPerProjectIni);
+			break;
+		}
+	}
+
+	if (!bPickedScheme)
+	{
+		if (bFullyInitialized)
+		{
+			// If we've been fully initialized and couldn't find a provider, clear any previous last scheme name.
+			GConfig->RemoveKey(
+				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), GEditorPerProjectIni);
+		}
+		else
+		{
+			// If we haven't finished initialization, use the last registered scheme (which helps us register for the correct
+			// scheme earlier when the modular feature hasn't registered yet). Usually we'll always be using the same scheme
+			// as last time!
+			FString LastScheme;
+			GConfig->GetString(
+				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), LastScheme,
+				GEditorPerProjectIni);
+			if (!LastScheme.IsEmpty())
+			{
+				bPickedScheme = true;
+				UpdateScheme(LastScheme);
+			}
+		}
+	}
+
+	// Finally, try using the hard coded setting
+	if (!bPickedScheme)
+	{
+		FString DefaultScheme = GetDefault<UHermesPluginSettings>()->DefaultUriScheme;
+		if (DefaultScheme.IsEmpty())
+		{
+			DefaultScheme = TEXT("hue4");
+		}
+
+		bPickedScheme = true;
+		UpdateScheme(DefaultScheme);
+	}
+
+	return bPickedScheme;
+}
+
+void FGenericHermesServer::UpdateScheme(const FString& Scheme)
+{
+	if (PreviouslyRegisteredScheme.IsSet())
+	{
+		if (PreviouslyRegisteredScheme == Scheme)
+		{
+			return;
+		}
+
+		UnregisterScheme(**PreviouslyRegisteredScheme);
+		PreviouslyRegisteredScheme.Reset();
+	}
+
+	if (RegisterScheme(*Scheme))
+	{
+		PreviouslyRegisteredScheme = Scheme;
 	}
 }

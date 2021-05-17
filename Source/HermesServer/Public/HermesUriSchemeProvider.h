@@ -14,12 +14,20 @@ struct IHermesUriSchemeProvider : IModularFeature
 	{
 	}
 
-	// IModularFeature name -- use this to register an implementation of IHermesUrlSchemeProvider.
+	/**
+	 * Feature name -- use this to register an implementation of IHermesUrlSchemeProvider through IModularFeatures.
+	 *
+	 * @see IModularFeatures
+	 */
 	static FName GetModularFeatureName()
 	{
 		static FName HermesUriSchemeProviderFeatureName(TEXT("HermesUriSchemeProvider"));
 		return HermesUriSchemeProviderFeatureName;
 	}
 
+	/**
+	 * Return the scheme preferred by this provider, if any. If it returns an empty Optional, the next provider
+	 * loaded will be considered.
+	 */
 	virtual TOptional<FString> GetPreferredScheme() = 0;
 };
