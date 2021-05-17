@@ -127,18 +127,13 @@ fn unregister_protocol(protocol: &str) {
     }
 }
 
-/// Combine the path, query string, and fragment from the given Url
+/// Combine the path and query string from the given Url
 fn get_path_and_extras(url: &url::Url) -> String {
     let mut path = url.path().to_owned();
 
     if let Some(query) = url.query() {
         path += "?";
         path += query;
-    }
-
-    if let Some(fragment) = url.fragment() {
-        path += "#";
-        path += fragment;
     }
 
     path

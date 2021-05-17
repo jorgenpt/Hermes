@@ -163,8 +163,6 @@ void FGenericHermesServer::HandlePath(const FString& FullPath) const
 		}
 	}
 
-	// TODO: Should we forward URL fragments too?
-
 	UE_LOG(LogHermesServer, Verbose, TEXT("Parsed path:\n  - Endpoint '%s'\n  - Subpath '%s'\n  - %i parameter(s):"),
 	       *EndpointName, *Path, QueryParameters.Num());
 	for (const auto& Pair : QueryParameters)
