@@ -1,5 +1,5 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use log::{debug, info, trace, warn};
 use mail_slot::{MailslotClient, MailslotName};
 use simplelog::*;
@@ -218,6 +218,29 @@ fn open_url(url: &str) -> Result<()> {
     Ok(())
 }
 
+/// Validate the scheme according to RFC3986 (https://datatracker.ietf.org/doc/html/rfc3986)
+fn parse_scheme(src: &str) -> Result<String, anyhow::Error> {
+    let src = src.trim();
+    let mut chars = src.chars();
+    let first_char = chars
+        .next()
+        .ok_or_else(|| anyhow!("protocol needs to contain at least one character"))?;
+    if !first_char.is_ascii_alphabetic() {
+        bail!(
+            "protocol '{}' needs to start with an alphabetic character",
+            src
+        );
+    }
+
+    for char in chars {
+        if !char.is_ascii_alphanumeric() && char != '+' && char != '-' && char != '.' {
+            bail!("protocol '{}' can only contain the letters a-z, the numbers 0-9, '+', '-', and '.'", src);
+        }
+    }
+
+    Ok(src.to_lowercase())
+}
+
 // This is the definition of our command line options
 #[derive(Debug, StructOpt)]
 #[structopt(
@@ -248,6 +271,7 @@ enum ExecutionMode {
     /// Register this EXE as a URL protocol handler
     Register {
         /// The protocol this exe will be registered for
+        #[structopt(parse(try_from_str = parse_scheme))]
         protocol: String,
         /// Enable debug logging for this registration
         #[structopt(long)]
@@ -259,6 +283,7 @@ enum ExecutionMode {
     /// Remove all registry entries for the URL protocol handler & hostname configuration
     Unregister {
         /// The protocol we will delete the registration for
+        #[structopt(parse(try_from_str = parse_scheme))]
         protocol: String,
     },
 }
