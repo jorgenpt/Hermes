@@ -17,6 +17,7 @@ private: // Implementation of FGenericHermesServer
 	virtual bool RegisterScheme(const TCHAR* Scheme) override final;
 	virtual void UnregisterScheme(const TCHAR* Scheme) override final;
 
+	FString ServerScheme;
 	HANDLE ServerHandle = INVALID_HANDLE_VALUE;
 	FProcHandle RegistrationHandle;
 };
@@ -36,6 +37,9 @@ static FString GetHermesHandlerExe()
 
 bool FWindowsHermesServerModule::RegisterScheme(const TCHAR* Scheme)
 {
+	checkf(ServerHandle == INVALID_HANDLE_VALUE,
+	       TEXT("Called RegisterScheme(\"%s\"), but mailslot already initialized for %s://"), Scheme, *ServerScheme);
+
 	const FString MailslotName = FString::Printf(TEXT("\\\\.\\mailslot\\bitSpatter\\Hermes\\%s"), Scheme);
 	UE_LOG(LogHermesServer, Verbose, TEXT("Attempting to create Mailslot %s"), *MailslotName);
 	ServerHandle = CreateMailslot(*MailslotName, MAX_MESSAGE_SIZE, 0, nullptr);
@@ -68,14 +72,16 @@ bool FWindowsHermesServerModule::RegisterScheme(const TCHAR* Scheme)
 		return false;
 	}
 
+	ServerScheme = Scheme;
 	return true;
 }
 
 void FWindowsHermesServerModule::UnregisterScheme(const TCHAR* Scheme)
 {
-	if (ServerHandle != INVALID_HANDLE_VALUE)
+	if (ServerScheme == Scheme && ServerHandle != INVALID_HANDLE_VALUE)
 	{
 		CloseHandle(ServerHandle);
+		ServerScheme = TEXT("");
 		ServerHandle = INVALID_HANDLE_VALUE;
 	}
 
@@ -94,7 +100,8 @@ void FWindowsHermesServerModule::UnregisterScheme(const TCHAR* Scheme)
 	FPlatformProcess::ExecProcess(*HermesHandlerExe, *Arguments, &ReturnCode, nullptr, nullptr, nullptr);
 	if (ReturnCode != 0)
 	{
-		UE_LOG(LogHermesServer, Warning, TEXT("Unregistration failed with status code %i"), ReturnCode);
+		UE_LOG(LogHermesServer, Warning, TEXT("Unregistration of %s:// failed with status code %i"), Scheme,
+		       ReturnCode);
 	}
 }
 
@@ -103,6 +110,7 @@ void FWindowsHermesServerModule::ShutdownModule()
 	if (ServerHandle != INVALID_HANDLE_VALUE)
 	{
 		CloseHandle(ServerHandle);
+		ServerScheme = TEXT("");
 		ServerHandle = INVALID_HANDLE_VALUE;
 	}
 

@@ -12,13 +12,13 @@ DECLARE_STATS_GROUP(TEXT("HermesServer"), STATGROUP_HermesServer, STATCAT_Advanc
 
 void FGenericHermesServer::StartupModule()
 {
-	RefreshRegisteredScheme(/* bIgnoreLastScheme= */ false);
+	RefreshRegisteredScheme();
 
 	auto OnModularFeaturesChanged = [&](const FName& Type, class IModularFeature*)
 	{
 		if (Type == IHermesUriSchemeProvider::GetModularFeatureName())
 		{
-			RefreshRegisteredScheme(/* bIgnoreLastScheme= */ false);
+			RefreshRegisteredScheme();
 		}
 	};
 
@@ -38,8 +38,10 @@ void FGenericHermesServer::Tick(float DeltaTime)
 {
 	if (!bFullyInitialized)
 	{
+		bFullyInitialized = true;
+
 		// Any modular features should've been registered by now, so refresh the scheme and ignore the saved LastScheme
-		RefreshRegisteredScheme(/* bIgnoreLastScheme= */ true);
+		RefreshRegisteredScheme();
 
 		FString LaunchPath;
 		if (FParse::Value(FCommandLine::Get(), TEXT("-HermesPath="), LaunchPath))
@@ -47,8 +49,6 @@ void FGenericHermesServer::Tick(float DeltaTime)
 			UE_LOG(LogHermesServer, Verbose, TEXT("Handling command line path %s"), *LaunchPath);
 			HandlePath(LaunchPath);
 		}
-
-		bFullyInitialized = true;
 	}
 }
 
@@ -184,55 +184,39 @@ void FGenericHermesServer::HandlePath(const FString& FullPath) const
 	}
 }
 
-bool FGenericHermesServer::RefreshRegisteredScheme(bool bFullyInitialized)
+bool FGenericHermesServer::RefreshRegisteredScheme()
 {
 	const FName FeatureName(IHermesUriSchemeProvider::GetModularFeatureName());
 	IModularFeatures& Features = IModularFeatures::Get();
 	TArray<IHermesUriSchemeProvider*> Providers = Features.GetModularFeatureImplementations<
 		IHermesUriSchemeProvider>(FeatureName);
 
+	FString LastScheme;
+	GConfig->GetString(
+		TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), LastScheme,
+		GEditorPerProjectIni);
+
 	// First prefer providers, in order of registration
-	bool bPickedScheme = false;
+	TOptional<FString> PickedScheme;
 	for (IHermesUriSchemeProvider* Provider : Providers)
 	{
 		TOptional<FString> Scheme = Provider->GetPreferredScheme();
 		if (Scheme.IsSet())
 		{
-			bPickedScheme = true;
-			UpdateScheme(*Scheme);
-			GConfig->SetString(
-				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), **Scheme, GEditorPerProjectIni);
+			PickedScheme = Scheme;
 			break;
 		}
 	}
 
-	if (!bPickedScheme)
+	// We only use the LastScheme if we're not fully initialized, so that we can do an "early initialization" until all
+	// the modular features have a chance to register.
+	if (!PickedScheme.IsSet() && !bFullyInitialized && !LastScheme.IsEmpty())
 	{
-		if (bFullyInitialized)
-		{
-			// If we've been fully initialized and couldn't find a provider, clear any previous last scheme name.
-			GConfig->RemoveKey(
-				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), GEditorPerProjectIni);
-		}
-		else
-		{
-			// If we haven't finished initialization, use the last registered scheme (which helps us register for the correct
-			// scheme earlier when the modular feature hasn't registered yet). Usually we'll always be using the same scheme
-			// as last time!
-			FString LastScheme;
-			GConfig->GetString(
-				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), LastScheme,
-				GEditorPerProjectIni);
-			if (!LastScheme.IsEmpty())
-			{
-				bPickedScheme = true;
-				UpdateScheme(LastScheme);
-			}
-		}
+		PickedScheme = LastScheme;;
 	}
 
 	// Finally, try using the hard coded setting
-	if (!bPickedScheme)
+	if (!PickedScheme.IsSet())
 	{
 		FString DefaultScheme = GetDefault<UHermesPluginSettings>()->DefaultUriScheme;
 		if (DefaultScheme.IsEmpty())
@@ -240,11 +224,38 @@ bool FGenericHermesServer::RefreshRegisteredScheme(bool bFullyInitialized)
 			DefaultScheme = TEXT("hue4");
 		}
 
-		bPickedScheme = true;
-		UpdateScheme(DefaultScheme);
+		PickedScheme = DefaultScheme;
 	}
 
-	return bPickedScheme;
+	// Unregister the scheme from our last boot if we're not using it any more,
+	// and update the 'last scheme' cached value for our next boot.
+	if (PickedScheme != LastScheme)
+	{
+		if (!LastScheme.IsEmpty())
+		{
+			UnregisterScheme(*LastScheme);
+		}
+
+		if (PickedScheme.IsSet())
+		{
+			GConfig->SetString(
+				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), **PickedScheme,
+				GEditorPerProjectIni);
+		}
+		else
+		{
+			GConfig->RemoveKey(
+				TEXT("/Script/HermesServer.HermesPluginSettings"), TEXT("LastScheme"), GEditorPerProjectIni);
+		}
+	}
+
+	if (PickedScheme.IsSet())
+	{
+		UpdateScheme(*PickedScheme);
+		return true;
+	}
+
+	return false;
 }
 
 void FGenericHermesServer::UpdateScheme(const FString& Scheme)
