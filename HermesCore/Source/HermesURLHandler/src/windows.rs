@@ -108,6 +108,8 @@ fn unregister_protocol(protocol: &str) {
         );
     }
 
+    let _ = hkcu.delete_subkey(&protocol_path);
+
     let configuration_path = get_configuration_registry_key(protocol);
     trace!("querying configuration at {}", configuration_path);
     if let Ok(configuration_registry_key) =
@@ -125,6 +127,8 @@ fn unregister_protocol(protocol: &str) {
             configuration_path,
         );
     }
+
+    let _ = hkcu.delete_subkey(&configuration_path);
 }
 
 /// Combine the path and query string from the given Url
