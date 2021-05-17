@@ -18,18 +18,10 @@ public class HermesContentEndpoint : ModuleRules
 				"HermesServer",
 				"InputCore",
 				"MainFrame",
+				"Slate",
+				"SlateCore",
 				"ToolMenus",
 				"UnrealEd",
-			}
-		);
-
-		// Temporarily list a few dependencies that we need to make ContentBrowser build.
-		// Required until https://github.com/EpicGames/UnrealEngine/pull/8036 is merged.
-		PrivateDependencyModuleNames.AddRange(
-			new[]
-			{
-				"SlateCore",
-				"Slate",
 			}
 		);
 	}
