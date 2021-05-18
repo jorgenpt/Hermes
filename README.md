@@ -11,10 +11,12 @@ Hermes requires you to [install Rust](https://www.rust-lang.org/tools/install) t
 1. Clone this repository into your project's `Plugins` folder
 1. Build `hermes_urls`:
     1. Navigating a command prompt to `Hermes/HermesCore/Source/HermesURLHandler`
-    2. Run `cargo build --release`.
+    1. Run `cargo build --release`
 1. Build & start your editor - the URL is automatically registered when the editor first starts
 
 **Note**: You can check in the resulting executable (`Hermes/HermesCore/Source/HermesURLHandler/target/release/hermes_urls.exe`) so that other people on your team do not need to build it. It only needs to be rebuilt if you modify the Rust source or update Hermes URLs.
+
+**Note**: If you don't want to install Rust, you can download a ZIP of the latest build from [the releases section of GitHub](https://github.com/jorgenpt/Hermes/releases/latest/).
 
 By default, Hermes will register URIs that match the project name of your project. If you need more control over the scheme used by these URIs, look at the `HermesUriSchemeBranchReplacement` plugin which lives next to `HermesCore` (and is not enabled by default). Either you can use it as-is simply by enabling it and configuring it, or you can use it as a starting point for developing your own `IHermesUriSchemeProvider`.
 
