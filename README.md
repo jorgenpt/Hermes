@@ -6,15 +6,11 @@ In addition, Hermes provides easy-to-use APIs to register your own endpoints, so
 
 ## Setup
 
-Hermes requires you to [install Rust](https://www.rust-lang.org/tools/install) to build the associated `hermes_urls` tool.
+**Prerequisite**: Hermes requires you to [install Rust](https://www.rust-lang.org/tools/install) to build the associated `hermes_urls` tool.
 
 1. Clone this repository into your project's `Plugins` folder
-1. Build `hermes_urls`:
-    1. Navigating a command prompt to `Hermes/HermesCore/Source/HermesURLHandler`
-    1. Run `cargo build --release`
-1. Build & start your editor - the URL is automatically registered when the editor first starts
-
-**Note**: You can check in the resulting executable (`Hermes/HermesCore/Source/HermesURLHandler/target/release/hermes_urls.exe`) so that other people on your team do not need to build it. It only needs to be rebuilt if you modify the Rust source or update Hermes URLs.
+1. Build your project - this will automatically build the `hermes_urls` Rust project
+1. Start your editor - the URL is automatically registered when the editor first starts
 
 **Note**: If you don't want to install Rust, you can download a ZIP of the latest build from [the releases section of GitHub](https://github.com/jorgenpt/Hermes/releases/latest/).
 
