@@ -199,7 +199,7 @@ fn open_url(url: &str) -> Result<()> {
 
             // TODO: Handle %%1 as an escape?
             let args: Vec<_> = protocol_command
-                .map(|arg| arg.replace("%1", &full_path))
+                .map(|arg: String| arg.replace("%1", &full_path))
                 .collect();
             (exe_name, args)
         };
