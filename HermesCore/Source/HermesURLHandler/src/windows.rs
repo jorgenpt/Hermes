@@ -10,7 +10,6 @@ use std::{
     process::{Command, Stdio},
 };
 use structopt::StructOpt;
-use url;
 use winreg::{enums::*, RegKey};
 
 // How many bytes do we let the log size grow to before we rotate it? We only keep one current and one old log.
@@ -33,7 +32,7 @@ fn get_configuration_registry_key(protocol: &str) -> String {
 /// Register associations with Windows to handle our protocol, and the command we'll invoke
 fn register_command(
     protocol: &str,
-    commandline: &Vec<String>,
+    #[allow(clippy::ptr_arg)] commandline: &Vec<String>,
     extra_args: Option<&str>,
 ) -> io::Result<()> {
     use std::env::current_exe;
@@ -149,7 +148,7 @@ fn open_url(url: &str) -> Result<()> {
     let protocol = url.scheme();
     let hostname = url
         .host_str()
-        .ok_or(anyhow!("could not parse hostname from {}", url))?;
+        .ok_or_else(|| anyhow!("could not parse hostname from {}", url))?;
     let path = get_path_and_extras(&url);
     let full_path = format!("/{}{}", hostname, path);
     trace!(
@@ -195,7 +194,7 @@ fn open_url(url: &str) -> Result<()> {
             let mut protocol_command = protocol_command.into_iter();
             let exe_name = protocol_command
                 .next()
-                .ok_or(anyhow!("empty command specified for hostname {}", hostname))?;
+                .ok_or_else(|| anyhow!("empty command specified for hostname {}", hostname))?;
 
             // TODO: Handle %%1 as an escape?
             let args: Vec<_> = protocol_command
@@ -295,12 +294,11 @@ fn get_exe_relative_path(filename: &str) -> io::Result<PathBuf> {
 
 fn rotate_and_open_log(log_path: &Path) -> Result<File, io::Error> {
     if let Ok(log_info) = std::fs::metadata(&log_path) {
-        if log_info.len() > MAX_LOG_SIZE {
-            if let Err(_) = std::fs::rename(&log_path, log_path.with_extension("log.old")) {
-                if let Err(_) = std::fs::remove_file(log_path) {
-                    return File::create(log_path);
-                }
-            }
+        if log_info.len() > MAX_LOG_SIZE
+            && std::fs::rename(&log_path, log_path.with_extension("log.old")).is_err()
+            && std::fs::remove_file(log_path).is_err()
+        {
+            return File::create(log_path);
         }
     }
 
