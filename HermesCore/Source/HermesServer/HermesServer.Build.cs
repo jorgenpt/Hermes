@@ -13,6 +13,7 @@ public class HermesServer : ModuleRules
 			{
 				"CoreUObject",
 				"DeveloperSettings",
+				"Engine",
 				"HermesURLHandler",
 				"HTTP",
 				"Projects",
