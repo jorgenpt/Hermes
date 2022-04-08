@@ -16,6 +16,7 @@ private: // Implementation of FTickableEditorObject
 private: // Implementation of FGenericHermesServer
 	virtual bool RegisterScheme(const TCHAR* Scheme) override final;
 	virtual void UnregisterScheme(const TCHAR* Scheme) override final;
+	virtual void ClipboardCopyURL(const FString& URL) override final;
 
 	FString ServerScheme;
 	HANDLE ServerHandle = INVALID_HANDLE_VALUE;
@@ -185,5 +186,67 @@ void FWindowsHermesServerModule::Tick(float DeltaTime)
 		       ErrorMsg);
 	}
 }
+
+static const FString SClipboardPrefixTemplate = TEXT("")
+TEXT("Version:0.9\r\n") \
+TEXT("StartHTML:00000000\r\n") \
+TEXT("EndHTML:00000000\r\n") \
+TEXT("StartFragment:00000000\r\n") \
+TEXT("EndFragment:00000000\r\n") \
+TEXT("<!DOCTYPE>\r\n")
+TEXT("<HTML><BODY>\r\n")
+TEXT("<!--StartFragment -->\r\n");
+
+static const FString SClipboardSuffix = TEXT("")
+TEXT("<!--EndFragment-->\r\n")
+TEXT("</BODY></HTML>\r\n");
+
+void FWindowsHermesServerModule::ClipboardCopyURL(const FString& URL)
+{
+	static int CFID = 0;
+	if (!CFID)
+	{
+		CFID = RegisterClipboardFormatA("HTML Format");
+	}
+
+	if (OpenClipboard(GetActiveWindow()))
+	{
+		FString ClipboardTemplate = SClipboardPrefixTemplate + FString::Printf(TEXT("<A HREF=\"%s\">%s</A>\r\n"), *URL, *URL) + SClipboardSuffix;
+		const int32 DocTypeIndex = ClipboardTemplate.Find(TEXT("<!DOCTYPE>\n"), ESearchCase::CaseSensitive);
+		const int32 FragmentStartIndex = ClipboardTemplate.Find(TEXT("<!--StartFragment -->\n"), ESearchCase::CaseSensitive);
+		const int32 FragmentEndIndex = ClipboardTemplate.Find(TEXT("<!--EndFragment -->\n"), ESearchCase::CaseSensitive);
+
+		ClipboardTemplate.ReplaceInline(TEXT("StartHTML:00000000"), *FString::Printf(TEXT("StartHTML:%08u"), DocTypeIndex), ESearchCase::CaseSensitive);
+		ClipboardTemplate.ReplaceInline(TEXT("EndHTML:00000000"), *FString::Printf(TEXT("EndHTML:%08u"), ClipboardTemplate.Len()), ESearchCase::CaseSensitive);
+		ClipboardTemplate.ReplaceInline(TEXT("StartFragment:00000000"), *FString::Printf(TEXT("StartFragment:%08u"), FragmentStartIndex), ESearchCase::CaseSensitive);
+		ClipboardTemplate.ReplaceInline(TEXT("EndFragment:00000000"), *FString::Printf(TEXT("EndFragment:%08u"), FragmentEndIndex), ESearchCase::CaseSensitive);
+
+		verify(EmptyClipboard());
+		{
+			HGLOBAL GlobalMem = GlobalAlloc(GMEM_MOVEABLE, sizeof(TCHAR) * (URL.Len() + 1));
+			check(GlobalMem);
+			TCHAR* Data = static_cast<TCHAR*>(GlobalLock(GlobalMem));
+			FCString::Strcpy(Data, (URL.Len() + 1), *URL);
+			GlobalUnlock(GlobalMem);
+			if (SetClipboardData(CF_UNICODETEXT, GlobalMem) == nullptr)
+			{
+				UE_LOG(LogHermesServer, Fatal, TEXT("SetClipboardData failed with error code %u"), static_cast<uint32>(GetLastError()));
+			}
+		}
+		{
+			HGLOBAL GlobalMem = GlobalAlloc(GMEM_MOVEABLE, ClipboardTemplate.Len() + 1);
+			check(GlobalMem);
+			char* Data = static_cast<char*>(GlobalLock(GlobalMem));
+			FCStringAnsi::Strcpy(Data, ClipboardTemplate.Len() + 1, TCHAR_TO_UTF8(*ClipboardTemplate));
+			GlobalUnlock(GlobalMem);
+			if (SetClipboardData(CFID, GlobalMem) == nullptr)
+			{
+				UE_LOG(LogHermesServer, Fatal, TEXT("SetClipboardData failed with error code %u"), static_cast<uint32>(GetLastError()));
+			}
+		}
+		verify(CloseClipboard());
+	}
+}
+
 
 #include <Windows/HideWindowsPlatformTypes.h>

@@ -67,7 +67,7 @@ void FHermesContentEndpointEditorExtension::CopyEndpointURLsToClipboard(TArray<F
 	checkf(ClipboardText.EndsWith(LINE_TERMINATOR), TEXT("There should always be at least one line terminator!"));
 	ClipboardText.RemoveAt(ClipboardText.Len() - LineTerminatorLen, LineTerminatorLen, false);
 
-	FPlatformApplicationMisc::ClipboardCopy(*ClipboardText);
+	Hermes.ClipboardCopyURL(ClipboardText);
 }
 
 void FHermesContentEndpointEditorExtension::InstallContentBrowserExtension()

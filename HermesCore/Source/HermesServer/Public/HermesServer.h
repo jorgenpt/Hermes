@@ -35,4 +35,6 @@ struct IHermesServerModule : IModuleInterface
 	 * @param Path a path that is passed to the endpoint, can be empty
 	 */
 	virtual FString GetUri(FName Endpoint, const FString& Path = TEXT("")) = 0;
+
+	virtual void ClipboardCopyURL(const FString& URL) = 0;
 };
