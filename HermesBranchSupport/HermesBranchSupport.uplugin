@@ -1,0 +1,37 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Hermes Branch Based URLs",
+	"Description": "Use the application branch identifier as the basis for your Hermes URI scheme",
+	"Category": "Developer",
+	"CreatedBy": "Jørgen Tjernø <jorgen@tjer.no>",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"EnabledByDefault": false,
+	"Modules": [
+		{
+			"Name": "HermesBranchSupport",
+			"Type": "EditorNoCommandlet",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64"
+			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "HermesCore",
+			"Enabled": true
+		}
+	],
+	"SupportedTargetPlatforms": [
+		"Win64"
+	]
+}

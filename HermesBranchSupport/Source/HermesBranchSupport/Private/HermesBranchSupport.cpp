@@ -8,29 +8,29 @@
 #include <Misc/App.h>
 #include <Modules/ModuleInterface.h>
 
-#include "HermesUriSchemeBranchReplacementPluginSettings.h"
+#include "HermesBranchSupportPluginSettings.h"
 #include "Modules/ModuleManager.h"
 
-struct FHermesUriSchemeBranchReplacement : IHermesUriSchemeProvider, IModuleInterface
+struct FHermesBranchSupport : IHermesUriSchemeProvider, IModuleInterface
 {
 	virtual void StartupModule() override final;
 	virtual void ShutdownModule() override final;
 	virtual TOptional<FString> GetPreferredScheme() override final;
 };
 
-IMPLEMENT_MODULE(FHermesUriSchemeBranchReplacement, HermesUriSchemeBranchReplacement);
+IMPLEMENT_MODULE(FHermesBranchSupport, HermesBranchSupport);
 
-void FHermesUriSchemeBranchReplacement::StartupModule()
+void FHermesBranchSupport::StartupModule()
 {
 	IModularFeatures::Get().RegisterModularFeature(GetModularFeatureName(), this);
 }
 
-void FHermesUriSchemeBranchReplacement::ShutdownModule()
+void FHermesBranchSupport::ShutdownModule()
 {
 	IModularFeatures::Get().UnregisterModularFeature(GetModularFeatureName(), this);
 }
 
-TOptional<FString> FHermesUriSchemeBranchReplacement::GetPreferredScheme()
+TOptional<FString> FHermesBranchSupport::GetPreferredScheme()
 {
-	return GetDefault<UHermesUriSchemeBranchReplacementPluginSettings>()->GetScheme();
+	return GetDefault<UHermesBranchSupportPluginSettings>()->GetScheme();
 }

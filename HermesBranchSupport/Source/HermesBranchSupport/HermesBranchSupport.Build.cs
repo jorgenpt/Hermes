@@ -1,9 +1,9 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 using UnrealBuildTool;
 
-public class HermesUriSchemeBranchReplacement : ModuleRules
+public class HermesBranchSupport : ModuleRules
 {
-	public HermesUriSchemeBranchReplacement(ReadOnlyTargetRules Target) : base(Target)
+	public HermesBranchSupport(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PrivateDependencyModuleNames.AddRange(new[] {"Core", "CoreUObject", "DeveloperSettings"});
 		PrivateIncludePathModuleNames.Add("HermesServer");

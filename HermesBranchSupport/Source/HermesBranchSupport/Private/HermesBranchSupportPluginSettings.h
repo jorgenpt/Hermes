@@ -1,9 +1,9 @@
-﻿// Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
+// Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #pragma once
 
 #include <CoreMinimal.h>
 #include <Engine/DeveloperSettings.h>
-#include "HermesUriSchemeBranchReplacementPluginSettings.generated.h"
+#include "HermesBranchSupportPluginSettings.generated.h"
 
 USTRUCT()
 struct FTokenReplacement
@@ -17,8 +17,8 @@ struct FTokenReplacement
 	FString Replacement;
 };
 
-UCLASS(Config=Editor, DefaultConfig, meta = (DisplayName = "Hermes URLs - Branch Based Scheme"))
-class UHermesUriSchemeBranchReplacementPluginSettings : public UDeveloperSettings
+UCLASS(Config=Editor, DefaultConfig, meta = (DisplayName = "Hermes URLs - Branch Based URLs"))
+class UHermesBranchSupportPluginSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 
@@ -26,7 +26,7 @@ public:
 	UPROPERTY(Config, EditAnywhere, meta = (
 		DisplayName = "Branch String Replacements",
 		ToolTip =
-		"The scheme to use for our URIs if there is no UriSchemeProvider -- should be unique to each project / branch",
+		"Tokens that we should replace in the branch name returned by Unreal",
 		ConfigRestartRequired = true))
 	TArray<FTokenReplacement> Replacements;
 
@@ -40,7 +40,7 @@ public:
 	FString ExampleUri;
 
 public:
-	UHermesUriSchemeBranchReplacementPluginSettings(const FObjectInitializer& ObjectInitializer);
+	UHermesBranchSupportPluginSettings(const FObjectInitializer& ObjectInitializer);
 	virtual void PostInitProperties() override;
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 

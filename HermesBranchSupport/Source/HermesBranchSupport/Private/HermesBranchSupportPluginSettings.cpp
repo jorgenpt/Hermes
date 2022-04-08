@@ -1,11 +1,11 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
-#include "HermesUriSchemeBranchReplacementPluginSettings.h"
+#include "HermesBranchSupportPluginSettings.h"
 
 #include <Misc/App.h>
 
 #include "Hermes.h"
 
-UHermesUriSchemeBranchReplacementPluginSettings::UHermesUriSchemeBranchReplacementPluginSettings(const FObjectInitializer& ObjectInitializer)
+UHermesBranchSupportPluginSettings::UHermesBranchSupportPluginSettings(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
 	const FString SourceBranchName = FApp::GetBranchName();
@@ -23,21 +23,21 @@ UHermesUriSchemeBranchReplacementPluginSettings::UHermesUriSchemeBranchReplaceme
 	}
 }
 
-void UHermesUriSchemeBranchReplacementPluginSettings::PostInitProperties()
+void UHermesBranchSupportPluginSettings::PostInitProperties()
 {
 	Super::PostInitProperties();
 	BranchName = FApp::GetBranchName();
 	UpdatePreview();
 }
 
-void UHermesUriSchemeBranchReplacementPluginSettings::PostEditChangeProperty(
+void UHermesBranchSupportPluginSettings::PostEditChangeProperty(
 	FPropertyChangedEvent& PropertyChangedEvent)
 {
 	UpdatePreview();
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
-TOptional<FString> UHermesUriSchemeBranchReplacementPluginSettings::GetScheme() const
+TOptional<FString> UHermesBranchSupportPluginSettings::GetScheme() const
 {
 	FString Scheme(FApp::GetBranchName());
 	for (const auto& Replacement : Replacements)
@@ -47,7 +47,7 @@ TOptional<FString> UHermesUriSchemeBranchReplacementPluginSettings::GetScheme() 
 	return Hermes::SanitizeScheme(Scheme);
 }
 
-void UHermesUriSchemeBranchReplacementPluginSettings::UpdatePreview()
+void UHermesBranchSupportPluginSettings::UpdatePreview()
 {
 	TOptional<FString> Scheme = GetScheme();
 	if (Scheme.IsSet())
