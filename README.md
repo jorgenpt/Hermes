@@ -6,15 +6,10 @@ In addition, Hermes provides easy-to-use APIs to register your own endpoints, so
 
 ## Setup
 
-**Prerequisite**: Hermes requires you to [install Rust](https://www.rust-lang.org/tools/install) to build the associated `hermes_urls` tool.
-
 1. Clone this repository into your project's `Plugins` folder
-1. Build your project - this will automatically build the `hermes_urls` Rust project
 1. Start your editor - the URL is automatically registered when the editor first starts
 
-**Note**: If you don't want to install Rust, you can download a ZIP of the latest build from [the releases section of GitHub](https://github.com/jorgenpt/Hermes/releases/latest/).
-
-By default, Hermes will register URIs that match the project name of your project. If you need more control over the scheme used by these URIs, look at the `HermesUriSchemeBranchReplacement` plugin which lives next to `HermesCore` (and is not enabled by default). Either you can use it as-is simply by enabling it and configuring it, or you can use it as a starting point for developing your own `IHermesUriSchemeProvider`.
+By default, Hermes will register URIs that match the project name of your project. If you need more control over the scheme used by these URIs, you can use the `HermesBranchSupport` plugin which lives next to `HermesCore`, which lets you include the branch name in the URI scheme. You'll need to enable `HermesBranchSupport` in your .uproject, and then you can go to Edit > Preferences and find "Hermes URLs - Branch Support" under Plugins to configure it. If you have very specific requirements, you can use it as a starting point for developing your own `IHermesUriSchemeProvider` which allows you to override the URI scheme used.
 
 ## Using
 
