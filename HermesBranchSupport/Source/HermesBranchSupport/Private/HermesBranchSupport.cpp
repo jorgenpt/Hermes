@@ -1,7 +1,7 @@
 // Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #pragma once
 
-#include <Core.h>
+#include <CoreMinimal.h>
 #include <Features/IModularFeatures.h>
 #include <HermesUriSchemeProvider.h>
 #include <Hermes.h>
