@@ -10,10 +10,10 @@ struct FTokenReplacement
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Token Replacement")
 	FString Token;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Token Replacement")
 	FString Replacement;
 };
 
@@ -23,7 +23,7 @@ class UHermesBranchSupportPluginSettings : public UDeveloperSettings
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(Config, EditAnywhere, meta = (
+	UPROPERTY(Config, EditAnywhere, Category = "Replacements", meta = (
 		DisplayName = "Branch String Replacements",
 		ToolTip =
 		"Tokens that we should replace in the branch name returned by Unreal",

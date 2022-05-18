@@ -1,4 +1,4 @@
-﻿// Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
+// Copyright (c) Jørgen Tjernø <jorgen@tjer.no>. All rights reserved.
 #pragma once
 
 #include <CoreMinimal.h>
@@ -11,7 +11,7 @@ class UHermesPluginSettings : public UDeveloperSettings
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(Config, EditAnywhere, meta = (
+	UPROPERTY(Config, EditAnywhere, Category = "Hermes", meta = (
 		DisplayName = "Default URI Scheme",
 		ToolTip =
 		"The scheme to use for our URIs if there is no UriSchemeProvider -- should be unique to each project / branch",
