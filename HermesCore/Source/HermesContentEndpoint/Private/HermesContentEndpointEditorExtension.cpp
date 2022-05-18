@@ -194,7 +194,7 @@ TSharedRef<FExtender> FHermesContentEndpointEditorExtension::OnExtendAssetEditor
 	TArray<FName> PackageNames;
 	for (UObject* EditedAsset : ContextSensitiveObjects)
 	{
-		if (EditedAsset && EditedAsset->IsAsset() && !EditedAsset->IsPendingKill())
+		if (IsValid(EditedAsset) && EditedAsset->IsAsset())
 		{
 			PackageNames.AddUnique(EditedAsset->GetOutermost()->GetFName());
 		}
@@ -224,7 +224,7 @@ void FHermesContentEndpointEditorExtension::CreateAssetContextMenu(FToolMenuSect
 	{
 		for (const UObject* EditedAsset : *MenuContext->Toolkit.Pin()->GetObjectsCurrentlyBeingEdited())
 		{
-			if (EditedAsset && EditedAsset->IsAsset() && !EditedAsset->IsPendingKill())
+			if (IsValid(EditedAsset) && EditedAsset->IsAsset())
 			{
 				InSection.AddMenuEntry(FHermesContentEndpointEditorCommands::Get().CopyEditURL);
 				break;
