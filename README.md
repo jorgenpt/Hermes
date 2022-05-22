@@ -1,8 +1,10 @@
-# Hermes URLs for Unreal Engine
+# <img src="assets/hermes_icon.png?raw=true" width="24"> Hermes URLs for Unreal Engine
 
 Hermes URLs is a plugin for Unreal Engine (and a small tool, `hermes_urls`) that out of the box allows you to copy URLs to arbitrary assets in your project and share them with your team e.g. through Slack. Those links will then directly open the Unreal Editor to the linked asset.
 
 In addition, Hermes provides easy-to-use APIs to register your own endpoints, so that you can create other direct deep links into the editor. E.g. you could create links that run automatic tests, link directly to a settings page, or whatever else strikes your fancy!
+
+Big thanks to Krista A. Leemhuis for the amazing icon!
 
 ## Setup
 
@@ -22,6 +24,8 @@ Similarly, when you've opened any asset in the asset editor, you should see a ne
 [<img src="README_asseteditor.png?raw=true" width=50%>](README_asseteditor.png?raw=true)
 
 ## License
+
+[The icon](assets/hermes_icon.png) is copyright (c) 2022 [Jørgen P. Tjernø](mailto:jorgen@tjer.no). All Rights Reserved.
 
 Hermes URLs is licensed under either of
 
