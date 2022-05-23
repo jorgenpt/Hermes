@@ -1,0 +1,69 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AlignEscapedNewlines: Left
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: true
+BreakBeforeBraces: Allman
+BreakConstructorInitializers: BeforeComma
+ColumnLimit: 132
+CompactNamespaces: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ForEachMacros:
+  - for
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '.*\.generated\.h'
+    Priority: 100
+  - Regex: ".*(PCH).*"
+    Priority: -1
+  - Regex: '".*"'
+    Priority: 1
+  - Regex: '^<.*\.(h)>'
+    Priority: 3
+  - Regex: "^<.*>"
+    Priority: 4
+IncludeIsMainRegex: "([-_](test|unittest))?$"
+IndentCaseLabels: true
+IndentPPDirectives: AfterHash
+IndentWidth: 4
+KeepEmptyLinesAtTheStartOfBlocks: false
+ObjCBinPackProtocolList: Never
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyReturnTypeOnItsOwnLine: 200
+PointerAlignment: Left
+RawStringFormats:
+  - Language: Cpp
+    Delimiters:
+      - cc
+      - CC
+      - cpp
+      - Cpp
+      - CPP
+      - "c++"
+      - "C++"
+    CanonicalDelimiter: ""
+    BasedOnStyle: google
+  - Language: TextProto
+    Delimiters:
+      - pb
+      - PB
+      - proto
+      - PROTO
+    EnclosingFunctions:
+      - EqualsProto
+      - EquivToProto
+      - PARSE_PARTIAL_TEXT_PROTO
+      - PARSE_TEST_PROTO
+      - PARSE_TEXT_PROTO
+      - ParseTextOrDie
+      - ParseTextProtoOrDie
+    CanonicalDelimiter: ""
+SpaceAfterCStyleCast: true
+SpacesBeforeTrailingComments: 4
+Standard: Auto
+TabWidth: 4
+UseTab: Always
