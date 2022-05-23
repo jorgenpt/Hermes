@@ -5,10 +5,16 @@
 
 #include <HAL/PlatformApplicationMisc.h>
 #include <HermesServer.h>
+#include <Interfaces/IPluginManager.h>
+#include <Styling/CoreStyle.h>
+#include <Styling/SlateStyle.h>
+#include <Styling/SlateStyleRegistry.h>
 #include <ToolMenus.h>
 #include <Toolkits/AssetEditorToolkitMenuContext.h>
 
 #define LOCTEXT_NAMESPACE "Editor.HermesContentEndpointEditorExtension"
+
+static const FName HermesContentEndpointStyleSetName("HermesContentEndpointStyle");
 
 struct FHermesContentEndpointEditorCommands : public TCommands<FHermesContentEndpointEditorCommands>
 {
@@ -27,7 +33,7 @@ FHermesContentEndpointEditorCommands::FHermesContentEndpointEditorCommands()
 		"HermesContentEndpointEditorExtensions",
 		NSLOCTEXT("Contexts", "Commands", "Hermes Content Endpoint Editor Extensions"),
 		NAME_None,
-		FEditorStyle::GetStyleSetName()
+		HermesContentEndpointStyleSetName
 	)
 {
 }
@@ -72,6 +78,22 @@ void FHermesContentEndpointEditorExtension::CopyEndpointURLsToClipboard(TArray<F
 
 void FHermesContentEndpointEditorExtension::InstallContentBrowserExtension()
 {
+	{
+		auto Plugin = IPluginManager::Get().FindPlugin("HermesCore");
+		checkf(Plugin, TEXT("Couldn't load our own plugin descriptor"));
+
+		SlateStyle = MakeShareable(new FSlateStyleSet(HermesContentEndpointStyleSetName));
+
+		SlateStyle->SetContentRoot(FPaths::Combine(Plugin->GetContentDir(), TEXT("Editor/Slate")));
+
+#define IMAGE_BRUSH_SVG( RelativePath, ... ) FSlateVectorImageBrush(SlateStyle->RootToContentDir(RelativePath, TEXT(".svg")), __VA_ARGS__)
+		SlateStyle->Set("HermesContentEndpointEditorExtensions.CopyEditURL", new IMAGE_BRUSH_SVG("hermes_icon_16", CoreStyleConstants::Icon16x16));
+		SlateStyle->Set("HermesContentEndpointEditorExtensions.CopyRevealURL", new IMAGE_BRUSH_SVG("hermes_icon_16", CoreStyleConstants::Icon16x16));
+#undef IMAGE_BRUSH_SVG
+
+		FSlateStyleRegistry::RegisterSlateStyle(*SlateStyle);
+	}
+
 	FHermesContentEndpointEditorCommands::Register();
 
 	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>(
@@ -111,6 +133,9 @@ void FHermesContentEndpointEditorExtension::UninstallContentBrowserExtension()
 		return Delegate.GetHandle() == ContentBrowserCommandExtenderDelegateHandle;
 	});
 	ContentBrowserCommandExtenderDelegateHandle.Reset();
+
+	FSlateStyleRegistry::UnRegisterSlateStyle(*SlateStyle);
+	SlateStyle.Reset();
 }
 
 void FHermesContentEndpointEditorExtension::OnExtendContentBrowserCommands(TSharedRef<FUICommandList> CommandList,

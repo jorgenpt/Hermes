@@ -18,6 +18,7 @@ public class HermesContentEndpoint : ModuleRules
 				"HermesServer",
 				"InputCore",
 				"MainFrame",
+				"Projects",
 				"Slate",
 				"SlateCore",
 				"ToolMenus",

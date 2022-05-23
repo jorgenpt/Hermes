@@ -6,6 +6,7 @@
 
 class FExtender;
 class FMenuBuilder;
+class FSlateStyleSet;
 class FUICommandList;
 struct FAssetData;
 struct FToolMenuSection;
@@ -34,4 +35,6 @@ private:
 	FDelegateHandle ContentBrowserCommandExtenderDelegateHandle;
 
 	FDelegateHandle AssetEditorExtenderDelegateHandle;
+
+	TSharedPtr<FSlateStyleSet> SlateStyle;
 };
