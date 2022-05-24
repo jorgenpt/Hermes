@@ -218,7 +218,7 @@ void FGenericHermesServer::RefreshRegisteredScheme()
 	// the modular features have a chance to register.
 	if (!PickedScheme.IsSet() && !bFullyInitialized && !LastScheme.IsEmpty())
 	{
-		PickedScheme = LastScheme;;
+		PickedScheme = LastScheme;
 	}
 
 	// Finally, try using the hard coded setting
@@ -227,7 +227,7 @@ void FGenericHermesServer::RefreshRegisteredScheme()
 		FString DefaultScheme = GetDefault<UHermesPluginSettings>()->DefaultUriScheme;
 		if (DefaultScheme.IsEmpty())
 		{
-			DefaultScheme = TEXT("hue4");
+			DefaultScheme = TEXT("hunreal");
 		}
 
 		PickedScheme = DefaultScheme;

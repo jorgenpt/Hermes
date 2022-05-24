@@ -9,5 +9,5 @@ UHermesPluginSettings::UHermesPluginSettings(const FObjectInitializer& ObjectIni
 	: Super(ObjectInitializer)
 {
 	const TOptional<FString> ProjectScheme = Hermes::SanitizeScheme(FApp::GetProjectName());
-	DefaultUriScheme = ProjectScheme.Get("hue4");
+	DefaultUriScheme = ProjectScheme.Get("hunreal");
 }
