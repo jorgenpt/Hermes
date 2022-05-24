@@ -18,6 +18,12 @@ public:
 		ConfigRestartRequired = true))
 	FString DefaultUriScheme;
 
+	UPROPERTY(Config, EditAnywhere, Category = "Hermes", AdvancedDisplay, meta = (
+		DisplayName = "Enable Debug Logging",
+		ToolTip = "Log debug messages about URL handling to hermes.log next to hermes_urls.exe",
+		ConfigRestartRequired = true))
+	bool bDebug = false;
+
 public:
 	UHermesPluginSettings(const FObjectInitializer& ObjectInitializer);
 

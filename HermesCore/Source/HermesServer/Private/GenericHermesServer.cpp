@@ -221,10 +221,12 @@ void FGenericHermesServer::RefreshRegisteredScheme()
 		PickedScheme = LastScheme;
 	}
 
+	const auto* Settings = GetDefault<UHermesPluginSettings>();
+
 	// Finally, try using the hard coded setting
 	if (!PickedScheme.IsSet())
 	{
-		FString DefaultScheme = GetDefault<UHermesPluginSettings>()->DefaultUriScheme;
+		FString DefaultScheme = Settings->DefaultUriScheme;
 		if (DefaultScheme.IsEmpty())
 		{
 			DefaultScheme = TEXT("hunreal");
@@ -257,11 +259,11 @@ void FGenericHermesServer::RefreshRegisteredScheme()
 
 	if (PickedScheme.IsSet())
 	{
-		UpdateScheme(*PickedScheme);
+		UpdateScheme(*PickedScheme, Settings->bDebug);
 	}
 }
 
-void FGenericHermesServer::UpdateScheme(const FString& Scheme)
+void FGenericHermesServer::UpdateScheme(const FString& Scheme, bool bDebug)
 {
 	if (PreviouslyRegisteredScheme.IsSet())
 	{
@@ -274,7 +276,7 @@ void FGenericHermesServer::UpdateScheme(const FString& Scheme)
 		PreviouslyRegisteredScheme.Reset();
 	}
 
-	if (RegisterScheme(*Scheme))
+	if (RegisterScheme(*Scheme, bDebug))
 	{
 		PreviouslyRegisteredScheme = Scheme;
 	}

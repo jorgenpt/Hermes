@@ -14,7 +14,7 @@ private: // Implementation of FTickableEditorObject
 	virtual void Tick(float DeltaTime) override final;
 
 private: // Implementation of FGenericHermesServer
-	virtual bool RegisterScheme(const TCHAR* Scheme) override final;
+	virtual bool RegisterScheme(const TCHAR* Scheme, bool bDebug) override final;
 	virtual void UnregisterScheme(const TCHAR* Scheme) override final;
 
 	FString ServerScheme;
@@ -35,7 +35,7 @@ static FString GetHermesHandlerExe()
 		"hermes_urls.exe");
 }
 
-bool FWindowsHermesServerModule::RegisterScheme(const TCHAR* Scheme)
+bool FWindowsHermesServerModule::RegisterScheme(const TCHAR* Scheme, bool bDebug)
 {
 	checkf(ServerHandle == INVALID_HANDLE_VALUE,
 	       TEXT("Called RegisterScheme(\"%s\"), but mailslot already initialized for %s://"), Scheme, *ServerScheme);
@@ -53,11 +53,12 @@ bool FWindowsHermesServerModule::RegisterScheme(const TCHAR* Scheme)
 
 	const FString EditorPath = FPaths::ConvertRelativePathToFull(
 		FPlatformProcess::GetModulesDirectory() / FPlatformProcess::ExecutableName(false));
+	const TCHAR* RegisterArgument = bDebug ? TEXT("--debug register --register-with-debugging") : TEXT("register");
 	const FString OpenCommand = FString::Printf(
 		TEXT("\"%s\" \"%s\" -HermesPath=\"%%1\""), *EditorPath, *FPaths::GetProjectFilePath());
 
 	const FString HermesHandlerExe = GetHermesHandlerExe();
-	const FString Arguments = FString::Printf(TEXT("register -- %s %s"), Scheme, *OpenCommand);
+	const FString Arguments = FString::Printf(TEXT("%s -- %s %s"), RegisterArgument, Scheme, *OpenCommand);
 
 	UE_LOG(LogHermesServer, Verbose, TEXT("Attempting to register %s:// using %s %s"), Scheme, *HermesHandlerExe,
 	       *Arguments);

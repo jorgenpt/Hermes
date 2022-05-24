@@ -42,7 +42,7 @@ private: // State
 
 protected: // Interface for platform implementations
 	/** Register ourselves for the given scheme with the OS handler. */
-	virtual bool RegisterScheme(const TCHAR* Scheme) = 0;
+	virtual bool RegisterScheme(const TCHAR* Scheme, bool bDebug) = 0;
 	/** Remove a previous registration for the given scheme. */
 	virtual void UnregisterScheme(const TCHAR* Scheme) = 0;
 
@@ -55,7 +55,7 @@ private: // Implementation details
 	 * If it's different from our previously registered scheme, configure this one as our current one. Unregisters the
 	 * previous scheme, if one has been registered.
 	 */
-	void UpdateScheme(const FString& Scheme);
+	void UpdateScheme(const FString& Scheme, bool bDebug);
 	/**
 	 * Pick the best scheme, preferring scheme providers first, then the scheme provider from our last run (if any),
 	 * then the scheme configured in the settings.
