@@ -5,6 +5,9 @@
 
 #include <Windows/AllowWindowsPlatformTypes.h>
 
+#include "accctrl.h"
+#include "aclapi.h"
+
 struct FWindowsHermesServerModule : FGenericHermesServer
 {
 private: // Implementation of IModuleInterface
@@ -35,14 +38,177 @@ static FString GetHermesHandlerExe()
 		"hermes_urls.exe");
 }
 
+/**
+ * Helper struct to manage the lifecycle of some opaque heap-allocated Windows types
+ */
+struct FHermesSecurityDescriptorBuilder
+{
+	~FHermesSecurityDescriptorBuilder()
+	{
+		if (ACL)
+			LocalFree(ACL);
+		if (SecurityDescriptor)
+			LocalFree(SecurityDescriptor);
+	}
+
+	PSECURITY_DESCRIPTOR CreateDescriptor(PSID Sid)
+	{
+		check(!SecurityDescriptor);
+		check(!ACL);
+
+		// Create an ACE (Access Control Entry) to allow the given SID to read & write to this object
+		EXPLICIT_ACCESS ExplicitAccess;
+		::ZeroMemory(&ExplicitAccess, sizeof(ExplicitAccess));
+		ExplicitAccess.grfAccessPermissions = GENERIC_READ | GENERIC_WRITE;
+		ExplicitAccess.grfAccessMode = SET_ACCESS;
+		ExplicitAccess.grfInheritance = NO_INHERITANCE;
+		ExplicitAccess.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+		ExplicitAccess.Trustee.TrusteeType = TRUSTEE_IS_USER;
+		ExplicitAccess.Trustee.ptstrName = (LPTSTR)Sid;
+
+		// Create a new ACL that contains the new ACEs.
+		DWORD dwRes = SetEntriesInAcl(1, &ExplicitAccess, NULL, &ACL);
+		if (ERROR_SUCCESS != dwRes)
+		{
+			UE_LOG(LogHermesServer, Error, TEXT("Could not set ACL entries for Mailslot security descriptor: %u"), GetLastError());
+			return nullptr;
+		}
+
+		// Create & initialize a security descriptor.
+		SecurityDescriptor = (PSECURITY_DESCRIPTOR)LocalAlloc(LPTR, SECURITY_DESCRIPTOR_MIN_LENGTH);
+		if (NULL == SecurityDescriptor)
+		{
+			UE_LOG(LogHermesServer, Error, TEXT("Could not allocate memory for Mailslot security descriptor: %u"), GetLastError());
+			return nullptr;
+		}
+
+		if (!InitializeSecurityDescriptor(SecurityDescriptor, SECURITY_DESCRIPTOR_REVISION))
+		{
+			UE_LOG(LogHermesServer, Error, TEXT("Could not initialize Mailslot security descriptor: %u"), GetLastError());
+			return nullptr;
+		}
+
+		// Add the ACL to the security descriptor.
+		if (!SetSecurityDescriptorDacl(SecurityDescriptor,
+									   /* bDaclPresent = */ TRUE,
+									   /* pDacl = */ ACL,
+									   /* bDaclDefaulted = */ FALSE))
+		{
+			UE_LOG(LogHermesServer, Error, TEXT("Could not set Mailslot security descriptor DACL: %u"), GetLastError());
+			return nullptr;
+		}
+
+		return SecurityDescriptor;
+	}
+
+private:
+	PACL ACL = NULL;
+	PSECURITY_DESCRIPTOR SecurityDescriptor = NULL;
+};
+
+/**
+ * Helper struct to manage the lifecycle of an opaque buffer used to represent a system SID
+ */
+struct FHermesSID
+{
+	void CopyFrom(PSID FromSID)
+	{
+		DWORD Length = GetLengthSid(FromSID);
+		Bytes.SetNumZeroed(Length);
+		bSuccess = CopySid(Length, GetSID(), FromSID);
+		if (!bSuccess)
+		{
+			UE_LOG(LogHermesServer, Error, TEXT("Could not get duplicate SID for Mailslot ACL: %u"), ::GetLastError());
+		}
+	}
+
+	bool IsValid() const
+	{
+		return bSuccess;
+	}
+
+	PSID GetSID()
+	{
+		return reinterpret_cast<PSID>(Bytes.GetData());
+	}
+
+private:
+	bool bSuccess = false;
+	TArray<uint8> Bytes;
+};
+
+/**
+ * Helper function to retrieve the SID of the current user -- this will get the actual user, even if running elevated (i.e. "Run As Administrator")
+ */
+FHermesSID HermesPrivate_GetCurrentUserSID()
+{
+	FHermesSID UserSID;
+	HANDLE TokenHandle;
+	if (::OpenProcessToken(::GetCurrentProcess(), TOKEN_QUERY, &TokenHandle))
+	{
+		DWORD UserTokenSize;
+
+		::GetTokenInformation(TokenHandle, TokenUser, NULL, 0, &UserTokenSize);
+
+		if (::GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+		{
+			TArray<BYTE> UserTokenBytes;
+			UserTokenBytes.SetNumZeroed(UserTokenSize);
+			PTOKEN_USER UserToken = reinterpret_cast<PTOKEN_USER>(UserTokenBytes.GetData());
+
+			if (::GetTokenInformation(TokenHandle, TokenUser, UserToken, UserTokenSize, &UserTokenSize))
+			{
+				UserSID.CopyFrom(UserToken->User.Sid);
+			}
+			else
+			{
+				UE_LOG(LogHermesServer, Error, TEXT("Could not get current user token for Mailslot ACL: %u"), ::GetLastError());
+			}
+		}
+		else
+		{
+			UE_LOG(LogHermesServer, Error, TEXT("Could not get buffer size for a token for Mailslot ACL: %u"), ::GetLastError());
+		}
+
+		::CloseHandle(TokenHandle);
+	}
+	else
+	{
+		UE_LOG(LogHermesServer, Error, TEXT("Could not query the process token for Mailslot ACL: %u"), ::GetLastError());
+	}
+
+	return UserSID;
+}
+
 bool FWindowsHermesServerModule::RegisterScheme(const TCHAR* Scheme, bool bDebug)
 {
 	checkf(ServerHandle == INVALID_HANDLE_VALUE,
 	       TEXT("Called RegisterScheme(\"%s\"), but mailslot already initialized for %s://"), Scheme, *ServerScheme);
 
+	SECURITY_ATTRIBUTES SecurityAttributes = {};
+	SecurityAttributes.nLength = sizeof(SECURITY_ATTRIBUTES);
+	SecurityAttributes.bInheritHandle = FALSE;
+
+	/**
+	 * Create a custom security descriptor for our mailslot that gives the current user read & write privileges to it.
+	 * This is needed because the default ACL for a mailslot when the process is running elevated (i.e. "Run as Administrator")
+	 * does not allow for writing by the current user, which means that any attempts by the non-elevated hermes_urls.exe to
+	 * open the Mailslot for writing will fail. Without this, when the editor is running as administrator, URLs will always open
+	 * a new editor.
+	 */
+	FHermesSecurityDescriptorBuilder DescriptorBuilder;
+	FHermesSID CurrentUserSID = HermesPrivate_GetCurrentUserSID();
+	if (CurrentUserSID.IsValid())
+	{
+		if (PSECURITY_DESCRIPTOR SecurityDescriptor = DescriptorBuilder.CreateDescriptor(CurrentUserSID.GetSID()))
+		{
+			SecurityAttributes.lpSecurityDescriptor = SecurityDescriptor;
+		}
+	}
+
 	const FString MailslotName = FString::Printf(TEXT("\\\\.\\mailslot\\bitSpatter\\Hermes\\%s"), Scheme);
 	UE_LOG(LogHermesServer, Verbose, TEXT("Attempting to create Mailslot %s"), *MailslotName);
-	ServerHandle = CreateMailslot(*MailslotName, MAX_MESSAGE_SIZE, 0, nullptr);
+	ServerHandle = CreateMailslot(*MailslotName, MAX_MESSAGE_SIZE, 0, &SecurityAttributes);
 	if (ServerHandle == INVALID_HANDLE_VALUE)
 	{
 		TCHAR ErrorMsg[1024];
