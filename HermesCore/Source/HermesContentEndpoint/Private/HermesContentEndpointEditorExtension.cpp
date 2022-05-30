@@ -40,9 +40,9 @@ FHermesContentEndpointEditorCommands::FHermesContentEndpointEditorCommands()
 
 void FHermesContentEndpointEditorCommands::RegisterCommands()
 {
-	UI_COMMAND(CopyRevealURL, "Copy URL", "Copy an URL that'll reveal this asset in the content browser.",
+	UI_COMMAND(CopyRevealURL, "Copy URL that reveals asset", "Copy an URL that'll reveal this asset in the content browser.",
 	           EUserInterfaceActionType::Button, FInputChord(EModifierKey::Alt | EModifierKey::Shift, EKeys::C));
-	UI_COMMAND(CopyEditURL, "Copy URL", "Copy an URL that'll open this asset for editing.",
+	UI_COMMAND(CopyEditURL, "Copy URL that opens asset", "Copy an URL that'll open this asset for editing.",
 	           EUserInterfaceActionType::Button, FInputChord(EModifierKey::Alt | EModifierKey::Shift, EKeys::E));
 }
 
