@@ -1,6 +1,6 @@
 # <img src="assets/hermes_icon.png?raw=true" width="24"> Hermes URLs for Unreal Engine
 
-Hermes URLs is a plugin for Unreal Engine (and a small tool, `hermes_urls`) that out of the box allows you to copy URLs to arbitrary assets in your project and share them with your team e.g. through Slack. Those links will then directly open the Unreal Editor to the linked asset.
+Hermes URLs is a plugin for Unreal Engine that out of the box allows you to copy URLs to arbitrary assets in your project and share them with your team e.g. through Slack. Those links will then directly open the Unreal Editor to the linked asset.
 
 In addition, Hermes provides easy-to-use APIs to register your own endpoints, so that you can create other direct deep links into the editor. E.g. you could create links that run automatic tests, link directly to a settings page, or whatever else strikes your fancy!
 
@@ -12,6 +12,9 @@ Big thanks to Krista A. Leemhuis for the amazing icon!
 1. Start your editor - the URL is automatically registered when the editor first starts
 
 By default, Hermes will register URIs that match the project name of your project. If you need more control over the scheme used by these URIs, you can use the `HermesBranchSupport` plugin which lives next to `HermesCore`, which lets you include the branch name in the URI scheme. You'll need to enable `HermesBranchSupport` in your .uproject, and then you can go to Edit > Preferences and find "Hermes URLs - Branch Support" under Plugins to configure it. If you have very specific requirements, you can use it as a starting point for developing your own `IHermesUriSchemeProvider` which allows you to override the URI scheme used.
+
+Hermes relies on [hermes_urls][hermes_urls] to register with the OS and dispatch URL requests. It's a small Rust project, and its binaries are checked in to this repository (in [HermesCore/Source/HermesURLHandler][hermesurlhandler]) for convenience's sake, but feel free to review the source and build your own if downloading EXE files from the internet puts you at (understandable) unease.
+
 
 ## Using
 
