@@ -63,13 +63,18 @@ void FHermesContentEndpointModule::ShutdownModule()
 	EditorExtension.UninstallAssetEditorExtension();
 	EditorExtension.UninstallContentBrowserExtension();
 
-	IHermesServerModule& Hermes = FModuleManager::GetModuleChecked<IHermesServerModule>("HermesServer");
-	Hermes.Unregister(NAME_EndpointId);
+	if (auto Hermes = FModuleManager::GetModulePtr<IHermesServerModule>("HermesServer"))
+	{
+		Hermes->Unregister(NAME_EndpointId);
+	}
 
 	if (AssetRegistryLoadedDelegateHandle.IsValid())
 	{
-		IAssetRegistry& AssetRegistry = FModuleManager::GetModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
-		AssetRegistry.OnFilesLoaded().Remove(AssetRegistryLoadedDelegateHandle);
+		if (IAssetRegistry* AssetRegistry = IAssetRegistry::Get())
+		{
+			AssetRegistry->OnFilesLoaded().Remove(AssetRegistryLoadedDelegateHandle);
+		}
+
 		AssetRegistryLoadedDelegateHandle.Reset();
 	}
 }
