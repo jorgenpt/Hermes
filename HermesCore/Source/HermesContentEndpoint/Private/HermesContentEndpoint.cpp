@@ -6,10 +6,9 @@
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <ContentBrowserModule.h>
 #include <CoreMinimal.h>
-#include <CoreUObject.h>
 #include <HermesServer.h>
 #include <IContentBrowserSingleton.h>
-#include <MainFrame.h>
+#include <Interfaces/IMainFrameModule.h>
 #include <Subsystems/AssetEditorSubsystem.h>
 
 #define LOCTEXT_NAMESPACE "Editor.HermesContentEndpoint"
