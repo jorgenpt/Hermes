@@ -145,6 +145,7 @@ void FHermesContentEndpointModule::OnRequest(const FString& Path, const FHermesQ
 		ParentWindow->ShowWindow();
 		// Use this hacky API to bring the OS-level window forward
 		ParentWindow->GetNativeWindow()->HACK_ForceToFront();
+		// TODO: Make sure that the content browser drawer is in focus
 	}
 }
 
