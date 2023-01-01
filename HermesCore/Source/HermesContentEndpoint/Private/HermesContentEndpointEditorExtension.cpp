@@ -86,10 +86,18 @@ void FHermesContentEndpointEditorExtension::InstallContentBrowserExtension()
 
 		SlateStyle->SetContentRoot(FPaths::Combine(Plugin->GetContentDir(), TEXT("Editor/Slate")));
 
+#if ENGINE_MAJOR_VERSION >= 5
 #define IMAGE_BRUSH_SVG( RelativePath, ... ) FSlateVectorImageBrush(SlateStyle->RootToContentDir(RelativePath, TEXT(".svg")), __VA_ARGS__)
 		SlateStyle->Set("HermesContentEndpointEditorExtensions.CopyEditURL", new IMAGE_BRUSH_SVG("hermes_icon_16", CoreStyleConstants::Icon16x16));
 		SlateStyle->Set("HermesContentEndpointEditorExtensions.CopyRevealURL", new IMAGE_BRUSH_SVG("hermes_icon_16", CoreStyleConstants::Icon16x16));
 #undef IMAGE_BRUSH_SVG
+#else
+#define IMAGE_BRUSH( RelativePath, ... ) FSlateImageBrush(SlateStyle->RootToContentDir(RelativePath, TEXT(".png")), __VA_ARGS__)
+		const FVector2D Icon16x16(16.0f, 16.0f);
+		SlateStyle->Set("HermesContentEndpointEditorExtensions.CopyEditURL", new IMAGE_BRUSH("hermes_icon_16", Icon16x16));
+		SlateStyle->Set("HermesContentEndpointEditorExtensions.CopyRevealURL", new IMAGE_BRUSH("hermes_icon_16", Icon16x16));
+#undef IMAGE_BRUSH
+#endif
 
 		FSlateStyleRegistry::RegisterSlateStyle(*SlateStyle);
 	}
