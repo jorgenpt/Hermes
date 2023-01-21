@@ -5,6 +5,8 @@
 #include "HermesUriSchemeProvider.h"
 
 #include <Features/IModularFeatures.h>
+#include <Misc/CommandLine.h>
+#include <Misc/ConfigCacheIni.h>
 #include <PlatformHttp.h>
 
 DEFINE_LOG_CATEGORY(LogHermesServer);
