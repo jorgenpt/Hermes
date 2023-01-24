@@ -3,13 +3,16 @@
 
 #include "HermesContentEndpoint.h"
 
+#include <Framework/Commands/Commands.h>
 #include <HAL/PlatformApplicationMisc.h>
 #include <HermesServer.h>
 #include <Interfaces/IPluginManager.h>
+#include <Launch/Resources/Version.h>
 #include <Styling/CoreStyle.h>
 #include <Styling/SlateStyle.h>
 #include <Styling/SlateStyleRegistry.h>
 #include <ToolMenus.h>
+#include <Toolkits/AssetEditorToolkit.h>
 #include <Toolkits/AssetEditorToolkitMenuContext.h>
 
 #define LOCTEXT_NAMESPACE "Editor.HermesContentEndpointEditorExtension"

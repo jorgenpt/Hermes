@@ -2,6 +2,8 @@
 #include "GenericHermesServer.h"
 
 #include <Interfaces/IPluginManager.h>
+#include <Misc/Paths.h>
+#include <Modules/ModuleManager.h>
 
 #include <Windows/AllowWindowsPlatformTypes.h>
 

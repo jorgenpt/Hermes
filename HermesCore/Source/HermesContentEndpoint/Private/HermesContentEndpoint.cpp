@@ -6,6 +6,7 @@
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <ContentBrowserModule.h>
 #include <CoreMinimal.h>
+#include <Editor.h>
 #include <HermesServer.h>
 #include <IContentBrowserSingleton.h>
 #include <Interfaces/IMainFrameModule.h>
