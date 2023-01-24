@@ -9,6 +9,8 @@ Big thanks to Krista A. Leemhuis for the amazing icons!
 
 ## Setup
 
+Hermes officially supports UE5 and is backwards compatible with UE4 version 4.27. Pull requests to support older versions are welcome.
+
 1. Clone this repository into your project's `Plugins` folder
 1. Start your editor - the URL is automatically registered when the editor first starts
 
