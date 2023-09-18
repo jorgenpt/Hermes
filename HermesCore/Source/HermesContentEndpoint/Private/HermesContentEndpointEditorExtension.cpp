@@ -7,7 +7,7 @@
 #include <HAL/PlatformApplicationMisc.h>
 #include <HermesServer.h>
 #include <Interfaces/IPluginManager.h>
-#include <Launch/Resources/Version.h>
+#include <Runtime/Launch/Resources/Version.h>
 #include <Styling/CoreStyle.h>
 #include <Styling/SlateStyle.h>
 #include <Styling/SlateStyleRegistry.h>
