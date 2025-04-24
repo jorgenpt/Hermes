@@ -5,6 +5,7 @@
 #include "HermesUriSchemeProvider.h"
 
 #include <CoreMinimal.h>
+#include <Runtime/Launch/Resources/Version.h>
 
 namespace Hermes
 {
@@ -35,7 +36,11 @@ namespace Hermes
 		// The first character can only be an alphabetic character, so strip off any non-alphabetic ones
 		while (Input.Len() != 0 && !FChar::IsAlpha(Input[0]))
 		{
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 5 || ENGINE_MAJOR_VERSION > 5
+			Input.RemoveAt(0, 1, EAllowShrinking::No);
+#else
 			Input.RemoveAt(0, 1, false);
+#endif
 		}
 
 		if (Input.Len() > 0)
